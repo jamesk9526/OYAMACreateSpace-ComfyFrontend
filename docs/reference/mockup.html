@@ -1,0 +1,357 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>OYAMA CreateSpace — Adobe Style Mockup</title>
+<style>
+:root{
+  --bg:#191919;--panel:#242424;--panel2:#2b2b2b;--panel3:#303030;--panel4:#373737;
+  --line:#3d3d3d;--line2:#4a4a4a;--text:#f1f1f1;--muted:#a2a2a2;--muted2:#707070;
+  --lime:#b8ff3b;--lime-soft:rgba(184,255,59,.10);--lime-line:rgba(184,255,59,.36);
+  --danger:#f06b6b;--warning:#efbb57;
+  --title:36px;--menu:30px;--bottom:28px;--tool:44px;--left:218px;--right:286px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;background:#151515;color:var(--text);font-family:"Segoe UI",Inter,Arial,sans-serif;overflow:hidden}
+body{font-size:12px}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+.app{height:100vh;display:grid;grid-template-rows:var(--title) var(--menu) 1fr var(--bottom);background:var(--bg)}
+
+/* top title */
+.titlebar{background:#171717;display:flex;align-items:center;border-bottom:1px solid #0e0e0e;user-select:none}
+.appmark{width:44px;height:100%;display:grid;place-items:center;background:#202020;border-right:1px solid #101010}
+.appmark span{width:22px;height:22px;border-radius:5px;background:var(--lime);color:#0d0d0d;display:grid;place-items:center;font-weight:900;font-size:12px}
+.apptitle{padding:0 12px;font-weight:600;color:#ddd;font-size:12px}
+.projectname{margin-left:5px;color:#7d7d7d;font-weight:400}
+.title-spacer{flex:1}
+.connection{height:100%;display:flex;align-items:center;gap:7px;padding:0 12px;border-left:1px solid #272727;color:#aaa;font-size:10px}
+.connection i{width:6px;height:6px;border-radius:50%;background:var(--lime);box-shadow:0 0 8px rgba(184,255,59,.55)}
+.win{height:100%;display:flex}
+.win button{width:44px;border:0;background:transparent;color:#aaa}
+.win button:hover{background:#2d2d2d;color:#fff}.win .close:hover{background:#c42b1c}
+
+/* menu */
+.menubar{background:#232323;display:flex;align-items:center;padding:0 7px;border-bottom:1px solid #121212}
+.menuitem{height:23px;border:0;background:transparent;color:#c4c4c4;padding:0 9px;border-radius:3px;font-size:11px}
+.menuitem:hover{background:#393939}
+.workspace-modes{margin-left:auto;display:flex;gap:2px}
+.workspace-modes button{border:1px solid transparent;background:transparent;color:#858585;padding:4px 8px;border-radius:3px;font-size:10px}
+.workspace-modes button.active{background:#343434;color:#fff;border-color:#444}
+
+/* body */
+.body{min-height:0;display:grid;grid-template-columns:var(--tool) var(--left) minmax(540px,1fr) var(--right)}
+
+/* tool rail */
+.toolrail{background:#202020;border-right:1px solid #111;display:flex;flex-direction:column;align-items:center;padding:4px 0;gap:2px}
+.tool{width:35px;height:35px;border:0;background:transparent;color:#a0a0a0;border-radius:3px;display:grid;place-items:center;font-size:15px;position:relative}
+.tool:hover{background:#343434;color:#fff}.tool.active{background:#353535;color:var(--lime)}
+.tool.active:before{content:"";position:absolute;left:-4px;top:6px;bottom:6px;width:2px;background:var(--lime)}
+.toolsep{width:26px;height:1px;background:#383838;margin:4px 0}.tool.bottom{margin-top:auto}
+
+/* left dock */
+.leftpanel{background:#252525;border-right:1px solid #111;overflow:auto}
+.paneltitle{height:30px;padding:0 10px;display:flex;align-items:center;border-bottom:1px solid #151515;background:#282828;color:#d3d3d3;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.05em}
+.section{border-bottom:1px solid #181818}
+.sectionhead{height:27px;padding:0 9px;display:flex;align-items:center;gap:6px;background:#2b2b2b;color:#c6c6c6;font-size:10px;font-weight:600}
+.chev{font-size:8px;color:#777}
+.navitem{height:31px;display:flex;align-items:center;gap:8px;padding:0 9px;border-left:2px solid transparent;color:#aaa;font-size:11px}
+.navitem:hover{background:#303030;color:#fff}.navitem.active{background:#333;color:#fff;border-left-color:var(--lime)}
+.navicon{width:18px;text-align:center;color:#888}.navitem.active .navicon{color:var(--lime)}
+.badge{margin-left:auto;color:#777;font-size:8px}.badge.on{color:var(--lime)}
+.moduleplus{margin:7px;height:29px;border:1px dashed #505050;border-radius:3px;display:flex;align-items:center;justify-content:center;color:#8a8a8a;font-size:10px}
+.moduleplus:hover{border-color:var(--lime-line);color:var(--lime);background:var(--lime-soft)}
+
+/* center */
+.center{min-width:0;display:grid;grid-template-rows:28px 1fr 196px;background:#191919}
+.doctabs{display:flex;align-items:end;background:#1d1d1d;border-bottom:1px solid #111}
+.doctab{height:27px;min-width:150px;padding:0 9px;border:0;border-right:1px solid #111;background:#242424;color:#aaa;display:flex;align-items:center;gap:8px;font-size:10px}
+.doctab.active{background:#303030;color:#fff;box-shadow:inset 0 2px var(--lime)}
+.tabdot{width:6px;height:6px;border-radius:50%;background:#666}.doctab.active .tabdot{background:var(--lime)}
+.tabclose{margin-left:auto;color:#707070}
+.canvasarea{position:relative;overflow:hidden;background:
+linear-gradient(45deg,#1b1b1b 25%,transparent 25%) 0 0/18px 18px,
+linear-gradient(-45deg,#1b1b1b 25%,transparent 25%) 0 9px/18px 18px,
+linear-gradient(45deg,transparent 75%,#1b1b1b 75%) 9px -9px/18px 18px,
+linear-gradient(-45deg,transparent 75%,#1b1b1b 75%) -9px 0/18px 18px,#171717}
+.canvas-toolbar{position:absolute;top:8px;left:50%;transform:translateX(-50%);height:28px;display:flex;background:#2a2a2a;border:1px solid #111;border-radius:3px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.canvas-toolbar button{width:32px;border:0;border-right:1px solid #1d1d1d;background:#2a2a2a;color:#aaa}
+.canvas-toolbar button:hover{background:#3a3a3a;color:#fff}
+.preview{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(72%,820px);aspect-ratio:16/9;background:#0e0e0e;border:1px solid #3a3a3a;box-shadow:0 12px 35px rgba(0,0,0,.35);display:grid;place-items:center}
+.preview-inner{text-align:center;max-width:360px;color:#777}
+.preview-icon{width:52px;height:52px;margin:0 auto 12px;border:1px solid #3a3a3a;background:#1c1c1c;display:grid;place-items:center;color:var(--lime);font-size:22px}
+.preview-inner b{display:block;color:#ccc;font-size:12px;margin-bottom:5px}.preview-inner span{font-size:10px;line-height:1.55}
+.zoom{position:absolute;bottom:8px;right:10px;background:#252525;border:1px solid #111;border-radius:3px;height:25px;display:flex;align-items:center;gap:7px;padding:0 8px;color:#999;font-size:9px}
+
+/* composer */
+.composer{border-top:1px solid #111;background:#232323;display:grid;grid-template-rows:31px 1fr 40px}
+.composer-tabs{display:flex;align-items:end;background:#202020;border-bottom:1px solid #151515}
+.composer-tab{height:30px;padding:0 12px;border:0;border-right:1px solid #151515;background:#252525;color:#9c9c9c;font-size:10px}
+.composer-tab.active{background:#2d2d2d;color:#fff;box-shadow:inset 0 2px var(--lime)}
+.promptwrap{padding:9px}
+textarea{width:100%;height:100%;resize:none;background:#191919;border:1px solid #3b3b3b;border-radius:2px;padding:9px 10px;outline:none;color:#eee;font-size:11px;line-height:1.45}
+textarea:focus{border-color:#666;box-shadow:0 0 0 1px var(--lime-line)}
+textarea::placeholder{color:#676767}
+.composer-actions{display:flex;align-items:center;gap:6px;padding:0 9px;border-top:1px solid #181818;background:#262626}
+.smallbtn{height:27px;border:1px solid #424242;background:#303030;color:#b5b5b5;border-radius:2px;padding:0 9px;font-size:10px}
+.smallbtn:hover{background:#3b3b3b;color:#fff}
+.generate{margin-left:auto;height:29px;border:1px solid #a4e92f;background:var(--lime);color:#111;border-radius:2px;padding:0 15px;font-size:10px;font-weight:800}
+.generate:hover{filter:brightness(1.05)}
+
+/* right inspector */
+.rightpanel{background:#252525;border-left:1px solid #111;overflow:auto}
+.panel-tabs{height:30px;display:flex;background:#282828;border-bottom:1px solid #161616}
+.panel-tabs button{flex:1;border:0;border-right:1px solid #181818;background:#282828;color:#8d8d8d;font-size:10px}
+.panel-tabs button.active{background:#303030;color:#fff;box-shadow:inset 0 2px var(--lime)}
+.propsection{border-bottom:1px solid #171717}
+.prophead{height:27px;padding:0 9px;display:flex;align-items:center;gap:6px;background:#2b2b2b;color:#c8c8c8;font-size:10px;font-weight:600}
+.props{padding:8px 9px 10px}
+.field{margin-bottom:8px}.field:last-child{margin-bottom:0}
+.field label{display:flex;justify-content:space-between;margin-bottom:4px;color:#969696;font-size:9px}
+.field label span{color:#c0c0c0}
+.control{width:100%;height:27px;background:#1d1d1d;border:1px solid #414141;border-radius:2px;padding:0 7px;color:#d0d0d0;font-size:10px;outline:none}
+.control:focus{border-color:#666}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.range{width:100%;accent-color:var(--lime)}
+.switchrow{display:flex;align-items:center;justify-content:space-between;color:#a8a8a8;font-size:10px}
+.switch{width:30px;height:16px;border-radius:9px;background:#454545;position:relative}.switch:after{content:"";position:absolute;width:12px;height:12px;border-radius:50%;left:2px;top:2px;background:#aaa}
+.switch.on{background:rgba(184,255,59,.35)}.switch.on:after{left:16px;background:var(--lime)}
+.canonical{margin:9px;border:1px solid var(--lime-line);background:var(--lime-soft);padding:8px;color:#aab59c;font-size:9px;line-height:1.45}
+.canonical b{color:#e8ffc6}
+
+/* status */
+.status{display:flex;align-items:center;gap:18px;padding:0 9px;background:#171717;border-top:1px solid #0f0f0f;color:#777;font-size:9px}
+.status strong{color:#b7b7b7;font-weight:600}
+.status .push{margin-left:auto}
+.bar{display:inline-block;width:56px;height:4px;background:#343434;margin-left:5px;vertical-align:middle}.bar i{display:block;width:68%;height:100%;background:var(--lime)}
+
+@media(max-width:1100px){
+  :root{--left:190px;--right:250px}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header class="titlebar">
+  <div class="appmark"><span>O</span></div>
+  <div class="apptitle">OYAMA CreateSpace <span class="projectname">— Untitled Project</span></div>
+  <div class="title-spacer"></div>
+  <div class="connection"><i></i> ComfyUI Connected</div>
+  <div class="win"><button>—</button><button>□</button><button class="close">×</button></div>
+</header>
+
+<nav class="menubar">
+  <button class="menuitem">File</button>
+  <button class="menuitem">Edit</button>
+  <button class="menuitem">Create</button>
+  <button class="menuitem">View</button>
+  <button class="menuitem">Window</button>
+  <button class="menuitem">Modules</button>
+  <button class="menuitem">Help</button>
+  <div class="workspace-modes">
+    <button class="active">Create</button>
+    <button>Assets</button>
+    <button>Workflow</button>
+  </div>
+</nav>
+
+<div class="body">
+
+<aside class="toolrail">
+  <button class="tool active" title="Generate">✦</button>
+  <button class="tool" title="Select">⌖</button>
+  <button class="tool" title="Reference">◈</button>
+  <button class="tool" title="Character">♙</button>
+  <div class="toolsep"></div>
+  <button class="tool" title="Image">▧</button>
+  <button class="tool" title="Video">▶</button>
+  <button class="tool" title="Mask">◩</button>
+  <button class="tool" title="Upscale">↗</button>
+  <button class="tool bottom" title="Settings">⚙</button>
+</aside>
+
+<aside class="leftpanel">
+  <div class="paneltitle">CreateSpace</div>
+
+  <div class="section">
+    <div class="sectionhead"><span class="chev">▼</span> Create</div>
+    <div class="navitem active"><span class="navicon">✦</span> Generate <span class="badge">CORE</span></div>
+    <div class="navitem"><span class="navicon">▶</span> Video <span class="badge on">H3</span></div>
+    <div class="navitem"><span class="navicon">▧</span> Image <span class="badge on">FLUX</span></div>
+    <div class="navitem"><span class="navicon">♙</span> Characters</div>
+    <div class="navitem"><span class="navicon">◈</span> References</div>
+  </div>
+
+  <div class="section">
+    <div class="sectionhead"><span class="chev">▼</span> Project</div>
+    <div class="navitem"><span class="navicon">▣</span> Project Files</div>
+    <div class="navitem"><span class="navicon">▤</span> Assets</div>
+    <div class="navitem"><span class="navicon">◷</span> History</div>
+    <div class="navitem"><span class="navicon">◇</span> Models</div>
+  </div>
+
+  <div class="section">
+    <div class="sectionhead"><span class="chev">▼</span> Modules</div>
+    <div class="navitem"><span class="navicon">◉</span> H3 Video <span class="badge on">ON</span></div>
+    <div class="navitem"><span class="navicon">◉</span> LTX Video <span class="badge on">ON</span></div>
+    <div class="navitem"><span class="navicon">◉</span> Upscale <span class="badge on">ON</span></div>
+    <div class="navitem"><span class="navicon">◉</span> Prompt Tools <span class="badge on">ON</span></div>
+    <div class="moduleplus">＋ Add Module</div>
+  </div>
+</aside>
+
+<main class="center">
+
+  <div class="doctabs">
+    <button class="doctab active"><span class="tabdot"></span> H3 Video — Untitled <span class="tabclose">×</span></button>
+    <button class="doctab"><span class="tabdot"></span> Character 01 <span class="tabclose">×</span></button>
+  </div>
+
+  <section class="canvasarea">
+    <div class="canvas-toolbar">
+      <button title="Fit">⌗</button>
+      <button title="Actual Size">1:1</button>
+      <button title="Compare">◫</button>
+      <button title="Fullscreen">□</button>
+    </div>
+
+    <div class="preview">
+      <div class="preview-inner">
+        <div class="preview-icon">✦</div>
+        <b>Generation Preview</b>
+        <span>Your generated image or video will appear here. The active module controls the workspace while CreateSpace keeps the shell consistent.</span>
+      </div>
+    </div>
+
+    <div class="zoom">Fit ▾ &nbsp; 62%</div>
+  </section>
+
+  <section class="composer">
+    <div class="composer-tabs">
+      <button class="composer-tab active">Prompt</button>
+      <button class="composer-tab">References</button>
+      <button class="composer-tab">Character</button>
+      <button class="composer-tab">Negative</button>
+    </div>
+    <div class="promptwrap">
+      <textarea placeholder="Describe the shot, motion, camera, lighting, environment, and subject..."></textarea>
+    </div>
+    <div class="composer-actions">
+      <button class="smallbtn">＋ Reference</button>
+      <button class="smallbtn">♙ Character</button>
+      <button class="smallbtn">◇ Preset</button>
+      <button class="smallbtn">⌘ Prompt Tools</button>
+      <button class="generate">✦ GENERATE</button>
+    </div>
+  </section>
+
+</main>
+
+<aside class="rightpanel">
+  <div class="panel-tabs">
+    <button class="active">Properties</button>
+    <button>Queue</button>
+    <button>Info</button>
+  </div>
+
+  <div class="propsection">
+    <div class="prophead"><span class="chev">▼</span> Generator</div>
+    <div class="props">
+      <div class="field">
+        <label>Module</label>
+        <select class="control"><option>H3 Video</option><option>LTX Video</option></select>
+      </div>
+      <div class="field">
+        <label>Mode</label>
+        <select class="control"><option>Text to Video</option><option>Image to Video</option><option>Ref2VA</option></select>
+      </div>
+      <div class="field">
+        <label>Model</label>
+        <select class="control"><option>MiniMax H3</option><option>MiniMax H3 Fast</option></select>
+      </div>
+    </div>
+  </div>
+
+  <div class="propsection">
+    <div class="prophead"><span class="chev">▼</span> Output</div>
+    <div class="props">
+      <div class="split">
+        <div class="field"><label>Width</label><input class="control" value="1280"></div>
+        <div class="field"><label>Height</label><input class="control" value="720"></div>
+      </div>
+      <div class="field"><label>Duration <span>10 sec</span></label><input class="range" type="range" min="3" max="20" value="10"></div>
+      <div class="field"><label>FPS</label><select class="control"><option>24</option><option>30</option></select></div>
+    </div>
+  </div>
+
+  <div class="propsection">
+    <div class="prophead"><span class="chev">▼</span> Generation</div>
+    <div class="props">
+      <div class="field"><label>Steps <span>14</span></label><input class="range" type="range" min="1" max="50" value="14"></div>
+      <div class="field"><label>Seed</label><input class="control" value="Random"></div>
+      <div class="field"><label>Scheduler</label><select class="control"><option>Model Default</option></select></div>
+      <div class="switchrow"><span>Use native defaults</span><div class="switch on"></div></div>
+    </div>
+  </div>
+
+  <div class="propsection">
+    <div class="prophead"><span class="chev">▼</span> Advanced</div>
+    <div class="props">
+      <div class="switchrow"><span>Advanced parameters</span><div class="switch"></div></div>
+    </div>
+  </div>
+
+  <div class="canonical">
+    <b>Canonical settings</b><br>
+    These controls are views into a shared setting schema. Other modules may expose the same values without creating duplicate state.
+  </div>
+</aside>
+
+</div>
+
+<footer class="status">
+  <span>Queue <strong>2</strong></span>
+  <span>GPU 0 <strong>RTX 3090</strong><span class="bar"><i></i></span></span>
+  <span>GPU 1 <strong>RTX 5060 Ti</strong></span>
+  <span>Modules <strong>7</strong></span>
+  <span class="push">CreateSpace Core <strong>Prototype</strong></span>
+</footer>
+
+</div>
+
+<script>
+document.querySelectorAll('.navitem').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.navitem').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+  });
+});
+document.querySelectorAll('.tool').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.tool').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+  });
+});
+document.querySelectorAll('.workspace-modes button').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.workspace-modes button').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+  });
+});
+document.querySelectorAll('.doctab').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.doctab').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+  });
+});
+document.querySelectorAll('.composer-tab').forEach(el=>{
+  el.addEventListener('click',()=>{
+    document.querySelectorAll('.composer-tab').forEach(x=>x.classList.remove('active'));
+    el.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+node_modules
+out
+release
+artifacts
+.generated
+pnpm-lock.yaml
+docs/reference/mockup.html
+src/styles/reference.css

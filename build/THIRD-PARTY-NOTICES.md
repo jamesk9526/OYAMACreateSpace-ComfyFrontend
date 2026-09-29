@@ -1,0 +1,7 @@
+# Bundled media tools
+
+CreateSpace invokes FFmpeg and ffprobe as separate, unmodified command-line programs. The Windows x64 private build uses BtbN's FFmpeg 8.1.3 GPL shared distribution, pinned by SHA-256 in `build/media-tools.json`. The bundle includes the distributor's GNU GPL version 3 license, its shared libraries, build configuration and provenance manifest under `resources/media-tools/win-x64/`. FFmpeg and third-party components are owned by their respective contributors; CreateSpace does not claim ownership of them.
+
+FFmpeg: https://ffmpeg.org/ . License information: https://ffmpeg.org/legal.html . Distributor and build recipes: https://github.com/BtbN/FFmpeg-Builds . FFmpeg source: https://git.ffmpeg.org/ffmpeg.git . Included dependencies and build scripts are listed in the distributor's `scripts.d/` directory. The pinned distribution enables GPL components, including libx264; it is not an LGPL-only build.
+
+This local installer is a private development artifact. Before publishing or redistributing the installer, provide the complete corresponding source for this exact binary and all included dependencies, with their license notices and build scripts, alongside the download. An upstream recipe link alone is not a complete corresponding-source archive. Public redistribution packaging remains a separately tracked release gate; do not claim this private artifact has passed it.

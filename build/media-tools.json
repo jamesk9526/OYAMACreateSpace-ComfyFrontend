@@ -1,0 +1,9 @@
+{
+  "platform": "win-x64",
+  "version": "8.1.3",
+  "distribution": "BtbN GPL shared",
+  "url": "https://github.com/BtbN/FFmpeg-Builds/releases/download/autobuild-2026-09-26-13-03/ffmpeg-n8.1.3-win64-gpl-shared-8.1.zip",
+  "sha256": "70dcd9d145f673110026b9d02ef28c0bd808efc8abe736459132eb3346f19086",
+  "license": "GPL-3.0-or-later",
+  "buildSource": "https://github.com/BtbN/FFmpeg-Builds/tree/58cc05f"
+}

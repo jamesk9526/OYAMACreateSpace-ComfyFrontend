@@ -1,0 +1,103 @@
+{
+  "name": "oyama-createspace",
+  "productName": "OYAMA CreateSpace",
+  "version": "2.0.0",
+  "description": "Modular ComfyUI desktop workspace",
+  "author": "James Knox",
+  "private": true,
+  "main": "out/main/index.js",
+  "packageManager": "pnpm@10.11.0",
+  "engines": {
+    "node": ">=22.16.0"
+  },
+  "scripts": {
+    "format": "prettier --write src electron shared scripts tests *.ts *.json",
+    "format:check": "prettier --check src electron shared scripts tests *.ts *.json",
+    "dev": "node scripts/dev.cjs",
+    "dev:mock": "node scripts/dev.cjs --mock",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "test:e2e": "playwright test",
+    "build": "node scripts/build.cjs",
+    "package:win": "node scripts/build.cjs --package",
+    "postinstall": "electron-builder install-app-deps"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "electron",
+      "esbuild",
+      "better-sqlite3"
+    ]
+  },
+  "build": {
+    "appId": "com.oyama.createspace",
+    "productName": "OYAMA CreateSpace",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "out/**/*",
+      "package.json"
+    ],
+    "asarUnpack": [
+      "**/*.node"
+    ],
+    "extraResources": [
+      {
+        "from": ".generated/media-tools/win-x64",
+        "to": "media-tools/win-x64",
+        "filter": [
+          "**/*"
+        ]
+      }
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "deleteAppDataOnUninstall": false
+    }
+  },
+  "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.23",
+    "@radix-ui/react-dropdown-menu": "^2.1.24",
+    "@radix-ui/react-switch": "^1.3.7",
+    "@radix-ui/react-tooltip": "^1.2.16",
+    "better-sqlite3": "^13.0.3",
+    "lucide-react": "^1.48.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "zod": "^4.6.5",
+    "zustand": "^5.0.15"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/better-sqlite3": "^9.6.0",
+    "@types/node": "^26.6.3",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "^44.4.5",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "esbuild": "0.28.2",
+    "prettier": "^3.9.9",
+    "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2",
+    "vite": "^7.3.6",
+    "vitest": "^4.1.11"
+  }
+}
