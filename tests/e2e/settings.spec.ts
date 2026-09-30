@@ -20,7 +20,8 @@ test('settings routing and custom Native/Turbo steps persist across restart', as
   };
   try {
     await expect(page.getByText('Mock ComfyUI', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.keyboard.press('Alt+f');
+    await page.getByRole('menuitem', { name: /^Settings/ }).click();
     await page.getByLabel('Live preview frames').fill('6');
     await page.getByLabel('Live preview FPS').fill('48');
     await page.getByLabel('GPU routing preset').selectOption('custom');
@@ -61,7 +62,8 @@ test('settings routing and custom Native/Turbo steps persist across restart', as
     app = await electron.launch({ args: ['.'], env });
     page = await app.firstWindow();
     await expect(page.getByText('Mock ComfyUI', { exact: true })).toBeVisible();
-    await page.getByRole('button', { name: 'Settings', exact: true }).click();
+    await page.keyboard.press('Alt+f');
+    await page.getByRole('menuitem', { name: /^Settings/ }).click();
     await expect(page.getByLabel('Live preview frames')).toHaveValue('6');
     await expect(page.getByLabel('Live preview FPS')).toHaveValue('48');
     await expect(page.getByLabel('GPU routing preset')).toHaveValue('custom');

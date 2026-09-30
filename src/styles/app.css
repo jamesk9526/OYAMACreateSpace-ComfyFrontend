@@ -58,9 +58,6 @@ select:focus-visible {
   width: calc(100% - 14px);
   background: transparent;
 }
-.tool-separated {
-  margin-top: 8px;
-}
 .center {
   min-height: 0;
   grid-template-rows: 28px minmax(0, 1fr) 196px;

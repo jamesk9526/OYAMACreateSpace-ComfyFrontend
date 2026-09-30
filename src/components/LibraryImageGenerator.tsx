@@ -11,7 +11,13 @@ import { Field } from './ui';
 
 export function AssetThumbnail({ asset, className = '' }: { asset?: Asset; className?: string }) {
   const [failedId, setFailedId] = useState<string | null>(null);
-  if (!asset || asset.missing || failedId === asset.id || asset.kind === 'audio')
+  if (
+    !asset ||
+    asset.missing ||
+    failedId === asset.id ||
+    asset.kind === 'audio' ||
+    asset.kind === 'model'
+  )
     return (
       <span
         className={`asset-placeholder ${className}`}

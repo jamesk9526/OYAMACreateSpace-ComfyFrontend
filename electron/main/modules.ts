@@ -2,6 +2,7 @@ import type { Asset, Draft, Job, LibraryRecord } from '../../shared/domain';
 import { activeRecordAssetIds } from '../../shared/record-media';
 import type { Store } from './database';
 import { continueAdapter } from '../../src/modules/continue/adapter';
+import { modelingAdapter } from '../../src/modules/modeling/adapter';
 import type {
   ComfyGraph,
   MediaKind,
@@ -79,6 +80,7 @@ export interface GeneratorAdapter {
   ): Draft;
 }
 export const generatorAdapters: Record<string, GeneratorAdapter> = {
+  modeling: modelingAdapter,
   continue: continueAdapter,
   h3: {
     context: h3ContextContract,
@@ -158,6 +160,7 @@ export const generatorAdapters: Record<string, GeneratorAdapter> = {
       const referenceLabels = new Map(
         s.references.map((id) => {
           const kind = asset(id).kind;
+          if (kind === 'model') throw new Error('H3 references must be images, video or audio.');
           return [
             id,
             `<${kind === 'image' ? 'Picture' : kind === 'video' ? 'Video' : 'Audio'} ${++labels[kind]}>`,
@@ -229,7 +232,7 @@ export const generatorAdapters: Record<string, GeneratorAdapter> = {
       const settings = ltxSchema.parse(draft.values);
       const assetIds = [
         ...new Set([
-          ...(settings.mode === 'image' && settings.firstFrame ? [settings.firstFrame] : []),
+          ...(settings.mode !== 'text' && settings.firstFrame ? [settings.firstFrame] : []),
           ...(settings.msr.enabled
             ? [
                 settings.msr.pic1,
@@ -257,7 +260,7 @@ export const generatorAdapters: Record<string, GeneratorAdapter> = {
       if (asset.kind !== 'image') throw new Error('LTX first frame must be an image.');
       return {
         ...draft,
-        values: ltxSchema.parse({ ...draft.values, mode: 'image', firstFrame: asset.id }),
+        values: ltxSchema.parse({ ...draft.values, mode: draft.values.mode === 'turnaround' ? 'turnaround' : 'image', firstFrame: asset.id }),
       };
     },
   },

@@ -18,6 +18,9 @@ test('workspace docks resize, collapse, swap and reset at both supported sizes',
     const errors: string[] = [];
     page.on('pageerror', (error) => errors.push(error.message));
     await expect(page.getByText('Mock ComfyUI', { exact: true })).toBeVisible();
+    await expect(page.getByRole('complementary', { name: 'Tools' })).toHaveCount(0);
+    await page.keyboard.press('Alt');
+    await expect(page.getByRole('button', { name: 'File', exact: true })).toBeFocused();
     await page.getByRole('button', { name: 'Collapse left panel' }).click();
     await expect(page.getByRole('button', { name: 'Restore left panel' })).toBeVisible();
     await page.getByRole('button', { name: 'Restore left panel' }).click();

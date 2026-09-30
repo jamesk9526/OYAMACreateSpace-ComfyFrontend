@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react';
-import { FileAudio, Film, Image, Plus, Download } from 'lucide-react';
+import { FileAudio, Film, Image, Plus, Download, Box } from 'lucide-react';
+import { ModelPreview } from '../../components/ModelPreview';
 import { Empty } from '../../components/ui';
 import { Modal } from '../../components/ui';
 import { AssetThumbnail, LibraryImageGenerator } from '../../components/LibraryImageGenerator';
@@ -161,7 +162,14 @@ export function AssetsWorkspace() {
       ) : (
         <div className="asset-grid">
           {visible.map((a) => {
-            const Icon = a.kind === 'video' ? Film : a.kind === 'audio' ? FileAudio : Image;
+            const Icon =
+              a.kind === 'model'
+                ? Box
+                : a.kind === 'video'
+                  ? Film
+                  : a.kind === 'audio'
+                    ? FileAudio
+                    : Image;
             return (
               <button
                 key={a.id}
@@ -265,6 +273,8 @@ export function AssetsWorkspace() {
           </header>
           {selected.missing ? (
             <p className="validation">Managed file is missing. Import the original again.</p>
+          ) : selected.kind === 'model' ? (
+            <ModelPreview asset={selected} />
           ) : selected.kind === 'video' ? (
             <>
               <video key={selected.id} ref={video} src={selected.url} controls />

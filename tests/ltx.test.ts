@@ -75,6 +75,29 @@ const firstFrame = '11111111-1111-4111-8111-111111111111';
 const secondFrame = '33333333-3333-4333-8333-333333333333';
 
 describe('LTX 2.5 workflow', () => {
+  it('conditions a motionless turnaround with an image and a full camera orbit', () => {
+    const graph = compileLtx(
+      {
+        ...ltxDefaults,
+        mode: 'turnaround',
+        firstFrame,
+        orbitDirection: 'counterclockwise',
+        prompt: 'Animated game character in an A-pose.',
+      },
+      info,
+      [{ id: firstFrame, kind: 'image', name: 'owned.png' }],
+      17,
+      'test',
+    );
+    expect(graph['20'].inputs.image).toBe('owned.png');
+    expect(graph['5'].inputs.text).toContain('360-degree counterclockwise orbit');
+    expect(graph['5'].inputs.text).toContain('completely motionless');
+    expect(graph['6'].inputs.text).toContain('pose change');
+    expect(graph['6'].inputs.text).not.toContain('cartoon');
+    expect(() =>
+      compileLtx({ ...ltxDefaults, mode: 'turnaround', prompt: 'A prop' }, info, [], 17, 'test'),
+    ).toThrow('first frame');
+  });
   it('compiles distilled text to video with audio and an 8n+1 frame grid', () => {
     expect(ltxFrames(4)).toBe(97);
     const graph = compileLtx(

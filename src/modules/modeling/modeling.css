@@ -1,0 +1,76 @@
+.modeling-canvas {
+  min-height: 0;
+}
+.modeling-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  font-size: 11px;
+  pointer-events: none;
+}
+.modeling-source {
+  position: absolute;
+  inset: 48px 20px 20px;
+  width: calc(100% - 40px);
+  height: calc(100% - 68px);
+  object-fit: contain;
+}
+.model-preview {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  min-height: 180px;
+}
+.model-viewport {
+  position: absolute;
+  inset: 40px 0 28px;
+}
+.model-preview-status {
+  position: absolute;
+  bottom: 7px;
+  left: 10px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.modeling-input {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  min-width: 0;
+}
+.modeling-input > img {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: var(--bg);
+  border: 1px solid var(--line);
+}
+.modeling-input .field {
+  flex: 1;
+  min-width: 0;
+}
+.modeling-canvas .canvas-toolbar {
+  z-index: 1;
+}
+.modeling-canvas .canvas-toolbar button {
+  width: auto;
+  padding: 0 10px;
+}
+.modeling-input {
+  flex-wrap: wrap;
+}
+.modeling-image-create {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.modeling-image-create .control {
+  flex: 1;
+  min-width: 0;
+}
+.modeling-input > .field {
+  margin: 0;
+}

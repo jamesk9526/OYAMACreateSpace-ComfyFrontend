@@ -7,7 +7,8 @@ export const ltxNegative = 'pc game, console game, video game, cartoon, childish
 
 export const ltxSchema = z
   .object({
-    mode: z.enum(['text', 'image']).default('text'),
+    mode: z.enum(['text', 'image', 'turnaround']).default('text'),
+    orbitDirection: z.enum(['clockwise', 'counterclockwise']).default('clockwise'),
     profile: z.enum(['turbo', 'quality']).default('turbo'),
     prompt: z.string().max(20000).default(''),
     negative: z.string().max(10000).default(ltxNegative),
@@ -39,7 +40,7 @@ export const ltxSchema = z
       }),
   })
   .superRefine((value, context) => {
-    if (value.mode === 'image' && !value.firstFrame)
+    if (value.mode !== 'text' && !value.firstFrame)
       context.addIssue({
         code: 'custom',
         path: ['firstFrame'],
@@ -105,6 +106,7 @@ export const ltxDefinition: ModuleDefinition = {
     'audio-output',
     'two-stage-quality',
     'first-frame-handoff',
+    'motionless-turnaround',
   ],
   settingsSchema: ltxSchema,
   defaults: ltxDefaults,

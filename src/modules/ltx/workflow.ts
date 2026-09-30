@@ -8,8 +8,9 @@ import {
   type WorkflowUpload,
 } from '../../../shared/modules';
 import { ltxSchema } from './definition';
+import { turnaroundConditioning } from './turnaround';
 
-export const ltxTemplateVersion = 'ltx25-distilled/1';
+export const ltxTemplateVersion = 'ltx25-distilled/2';
 export const firstStageSigmas =
   '1.0, 0.99375, 0.9875, 0.98125, 0.975, 0.909375, 0.725, 0.421875, 0.0';
 export const refinerSigmas = '0.85, 0.7250, 0.4219, 0.0';
@@ -32,6 +33,7 @@ export function compileLtx(
 ): ComfyGraph {
   const s = ltxSchema.parse(raw);
   if (!s.prompt.trim()) throw new Error('Describe the video before generating.');
+  const conditioning = s.mode === 'turnaround' ? turnaroundConditioning(s) : s;
   const model = choose(
     nodeChoices(info, 'UNETLoader', 'unet_name'),
     /ltx-2\.5.*distilled.*transformer.*\.safetensors$/i,
@@ -62,8 +64,8 @@ export function compileLtx(
     },
     '3': { class_type: 'VAELoader', inputs: { vae_name: videoVae } },
     '4': { class_type: 'VAELoader', inputs: { vae_name: audioVae } },
-    '5': { class_type: 'CLIPTextEncode', inputs: { clip: ['2', 0], text: s.prompt } },
-    '6': { class_type: 'CLIPTextEncode', inputs: { clip: ['2', 0], text: s.negative } },
+    '5': { class_type: 'CLIPTextEncode', inputs: { clip: ['2', 0], text: conditioning.prompt } },
+    '6': { class_type: 'CLIPTextEncode', inputs: { clip: ['2', 0], text: conditioning.negative } },
     '7': {
       class_type: 'LTXVConditioning',
       inputs: { positive: ['5', 0], negative: ['6', 0], frame_rate: 24 },
@@ -143,7 +145,7 @@ export function compileLtx(
     initialVideo = ['48', 2];
   }
   let preparedImage: Link | undefined;
-  if (s.mode === 'image') {
+  if (s.mode !== 'text') {
     const upload = uploads.find((file) => file.id === s.firstFrame && file.kind === 'image');
     if (!upload) throw new Error('LTX first-frame image upload is missing.');
     graph['20'] = { class_type: 'LoadImage', inputs: { image: upload.name } };

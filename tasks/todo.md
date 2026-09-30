@@ -128,3 +128,25 @@ Split each into bounded tasks before implementation using the same acceptance/ve
 - [x] Cached bounded image thumbnails and video stills, missing/decode placeholders, row/grid previews, and default/explicit validated record covers. Full-resolution detail previews remain available.
 - [x] Comfy MCP validated the Turbo graph; a real application-driven Character image completed, was approved, and reopened after app restart. Both required viewport screenshots were inspected. `build.bat` passed 79 unit tests and 21 Electron checks (four live-only checks skipped); installer `2.0.0+20260929.205335` built.
 - [ ] Task 32 five-view visual-quality acceptance and task 33 hair/accessory libraries remain separate open work.
+
+## Shell rail removal
+
+- [x] Removed the redundant icon rail and reclaimed its grid width. Settings uses File > Settings in the existing top menu; Alt focuses File and Alt+F opens it. Typecheck/build and both focused Electron settings/layout checks passed. Screenshots at 1440x900 and 1100x760 were inspected.
+- [ ] Full unit suite remains at 78 passed / 1 failed: the generator resolution-lock default assertion in tests/resolution.test.ts includes the concurrently added Modeling definition, which returns undefined. Preserved the Modeling work and the assertion.
+
+## Modeling: image to 3D
+
+- [x] Separate Modeling module with Character/Asset modes, Realistic/Animated looks, editable guided ZImage source creation, project/global image selection and compact shell controls.
+- [x] Pixal3D schema/compiler/main adapter and explicit registries; managed GLB output, orbit preview and export; foreign/missing/non-image input validation; model exclusion from H3/Movie.
+- [x] Typecheck/build, 83 unit tests and focused Modeling/shared asset/media/movie Electron checks. Comfy MCP graph validation passed with zero errors/warnings. Both Modeling control viewport screenshots inspected.
+- [ ] Real application-driven Pixal3D output, embedded PBR/material inspection, visible result at both sizes, export and restart reopening. Existing render is being observed without resubmission.
+- [ ] Multi-view image inputs, character rigging/animation, game-engine-specific asset validation and export presets.
+- [ ] Modeling live gate intentionally pending at user request: Pixal3D prompt 5a7308c0-b14c-4b35-8d2a-b97afd118b6b was interrupted during texture baking; no saved GLB. Do not automatically retry.
+
+### Modeling preview and turnaround (2026-09-30)
+- [x] Fix managed GLB fetch permissions; view, rotate and reopen an existing real textured model. Embedded-texture Electron regression passes.
+- [x] Match single-view Comfy mesh/PBR settings, separate seeds and defaults; preserve source/mode/look when applying the preset. Changed graph validates through Comfy MCP.
+- [ ] Real render/export/restart for the changed Pixal3D graph remains pending by user request.
+- [x] LTX experimental turnaround mode, managed Modeling input handoff, orbit direction, saved drafts and Save 4 views with lineage.
+- [x] Real LTX turnaround submission, stream/duration probing, extracted-frame inspection and restart decode. Focused Electron checks and both control viewport screenshots pass.
+- [ ] Reliable full 360-degree orbit without pose/geometry drift, character-case live verification and automatic multiview-to-Pixal3D conditioning. Current samples are not certified camera angles.

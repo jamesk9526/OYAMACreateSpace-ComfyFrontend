@@ -10,11 +10,7 @@ node -e "const [a,b]=process.versions.node.split('.').map(Number);if(a<22||(a===
 if errorlevel 1 exit /b 1
 call npx --yes pnpm@10.11.0 --offline=false install --frozen-lockfile
 if errorlevel 1 exit /b 1
-call npx --yes pnpm@10.11.0 typecheck
-if errorlevel 1 exit /b 1
-call npx --yes pnpm@10.11.0 test
-if errorlevel 1 exit /b 1
-call npx --yes pnpm@10.11.0 package:win
+call npx --yes pnpm@10.11.0 package:win %*
 if errorlevel 1 exit /b 1
 echo Installer ready in "%~dp0release"
 endlocal

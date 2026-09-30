@@ -35,7 +35,13 @@ import { movieTimelineSchema } from '../../shared/movie-timeline';
 protocol.registerSchemesAsPrivileged([
   {
     scheme: 'oyama',
-    privileges: { standard: true, secure: true, supportFetchAPI: true, stream: true },
+    privileges: {
+      standard: true,
+      secure: true,
+      supportFetchAPI: true,
+      stream: true,
+      corsEnabled: true,
+    },
   },
 ]);
 const mock = process.env.OYAMA_MOCK === '1' && (!app.isPackaged || process.env.OYAMA_TEST === '1');
@@ -294,6 +300,7 @@ else
                 'mp3',
                 'flac',
                 'ogg',
+                'glb',
               ],
             },
           ],

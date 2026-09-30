@@ -152,6 +152,7 @@ export function compileH3(
   const load = (assetId: string) => {
     const input = uploads.find((u) => u.id === assetId);
     if (!input) throw new Error('A reference is missing. Import or attach it again.');
+    if (input.kind === 'model') throw new Error('H3 does not accept 3D models.');
     const id = String(next++);
     graph[id] = {
       class_type:
@@ -178,6 +179,7 @@ export function compileH3(
     for (const id of s.references) {
       const input = uploads.find((u) => u.id === id);
       if (!input) throw new Error('Missing reference');
+      if (input.kind === 'model') throw new Error('H3 does not accept 3D models.');
       conditioning[`ref_${input.kind}s.ref_${input.kind}_${indices[input.kind]++}`] = load(id);
     }
   } else if (s.mode === 'image') {

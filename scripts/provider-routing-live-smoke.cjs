@@ -193,7 +193,8 @@ async function main() {
       console.log(JSON.stringify({ name, promptId: job.promptId, probe, playback }));
     }
     if (reopen) {
-      await page.getByRole('button', { name: 'Settings', exact: true }).click();
+      await page.keyboard.press('Alt+f');
+      await page.getByRole('menuitem', { name: /^Settings/ }).click();
       await page.getByRole('button', { name: 'Save & test connection' }).click();
       await page.getByRole('status').filter({ hasText: 'Settings saved' }).waitFor();
       if ((await page.getByLabel('Video / image VAE device').inputValue()) !== 'gpu:1')

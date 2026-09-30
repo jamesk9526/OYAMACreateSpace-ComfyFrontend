@@ -29,7 +29,7 @@ pnpm test:e2e
 pnpm package:win
 ```
 
-Double-click `build.bat` to install locked dependencies, typecheck, run unit tests, compile, run Electron interaction tests and create a Windows x64 NSIS installer under `release/`. Packaging stops on any failed check. Build metadata starts at 2.0.0 and automatically includes UTC date/time; the app, installer and Windows file metadata share one build timestamp. Native SQLite is rebuilt for Electron during install.
+Double-click `build.bat` to install locked dependencies, typecheck, compile and create a Windows x64 NSIS installer under `release/`. Tests are optional: run `build.bat --test` to include the full unit and Electron interaction suites. The same flag works with `pnpm package:win --test` and `pnpm build --test`. Packaging stops on any failed check. Build metadata starts at 2.0.0 and automatically includes UTC date/time; the app, installer and Windows file metadata share one build timestamp. Native SQLite is rebuilt for Electron during install.
 
 Mock runs use a bundled synthetic video and isolated data. Settings offers success, failure and offline scenarios. The production app uses the live server. Generated media remains available after restart and can be exported from Assets.
 

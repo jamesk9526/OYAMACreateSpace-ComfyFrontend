@@ -28,6 +28,8 @@ it('edits either locked axis and loads old drafts unlocked in every generator', 
     fitResolution({ width: 9, height: 16 }, 'height', 1024, { min: 256, max: 2048, step: 64 }),
   ).toEqual({ width: 576, height: 1024 });
   for (const definition of Object.values(generatorDefinitions)) {
+    // Only raster/video generators expose editable output dimensions.
+    if (!Object.hasOwn(definition.defaults || {}, 'width')) continue;
     const result = definition.settingsSchema!.parse({}) as { resolutionLock: unknown };
     expect(result.resolutionLock).toBeNull();
   }

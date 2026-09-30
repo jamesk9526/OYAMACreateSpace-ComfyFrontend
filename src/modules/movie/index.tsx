@@ -62,7 +62,9 @@ export function MovieWorkspace() {
   const trimGesture = useRef<{ clip: MovieTimelineClip; edge: 'start' | 'end'; x: number } | null>(
     null,
   );
-  const videoAssets = assets.filter((asset) => asset.projectId === projectId);
+  const videoAssets = assets.filter(
+    (asset) => asset.projectId === projectId && asset.kind !== 'model',
+  );
 
   useEffect(() => {
     let current = true;
@@ -733,7 +735,7 @@ export function MovieSidebar({
   const projectId = useShell((s) => s.projectId);
   const selectedId = useShell((s) => s.selectedAsset);
   const libraryAssets = useLibrary((s) => s.assets);
-  const assets = libraryAssets.filter((a) => a.projectId === projectId);
+  const assets = libraryAssets.filter((a) => a.projectId === projectId && a.kind !== 'model');
   const pageCount = Math.max(1, Math.ceil(assets.length / 6));
   const currentPage = Math.min(mediaPage, pageCount - 1);
   const selected = assets.find((a) => a.id === selectedId);

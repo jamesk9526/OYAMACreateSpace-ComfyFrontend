@@ -42,14 +42,40 @@ export function LtxInspector() {
             className="control"
             value={settings.mode}
             onChange={(event) => {
-              patchDraft({ mode: event.target.value }, 'ltx');
+              patchDraft(
+                {
+                  mode: event.target.value,
+                  ...(event.target.value === 'turnaround' ? { duration: 8 } : {}),
+                },
+                'ltx',
+              );
               useShell.setState({ composerTab: 'Prompt' });
             }}
           >
             <option value="text">Text to Video</option>
             <option value="image">Image to Video</option>
+            <option value="turnaround">Turnaround · experimental</option>
           </select>
         </Field>
+        {settings.mode === 'turnaround' && (
+          <>
+            <Field label="Camera orbit">
+              <select
+                aria-label="Camera orbit"
+                className="control"
+                value={settings.orbitDirection}
+                onChange={(event) => patchDraft({ orbitDirection: event.target.value }, 'ltx')}
+              >
+                <option value="clockwise">360° clockwise</option>
+                <option value="counterclockwise">360° counterclockwise</option>
+              </select>
+            </Field>
+            <p className="muted">
+              Requests a motionless subject and 360° camera orbit. A complete orbit and consistent
+              geometry are not guaranteed; review the saved views before modeling.
+            </p>
+          </>
+        )}
         <Field label="Profile">
           <select
             aria-label="LTX profile"
@@ -217,6 +243,37 @@ export function LtxComposer() {
   const readiness = useSettings((state) => state.readiness);
   const availability = ltxAvailability(readiness, settings.profile, settings.msr.enabled);
   const [submitting, setSubmitting] = useState(false);
+  const [savingViews, setSavingViews] = useState(false);
+  const jobs = useJobs((state) => state.jobs);
+  const selectedAsset = useShell((state) => state.selectedAsset);
+  const turnarounds = jobs.filter(
+    (job) =>
+      job.projectId === projectId &&
+      job.moduleId === 'ltx' &&
+      job.status === 'complete' &&
+      job.snapshot.mode === 'turnaround',
+  );
+  const turnaroundId =
+    turnarounds.flatMap((job) => job.assetIds).find((id) => id === selectedAsset) ||
+    turnarounds[0]?.assetIds[0];
+  const saveViews = async () => {
+    if (!turnaroundId) return;
+    setSavingViews(true);
+    try {
+      await guarded(async () => {
+        const metadata = await window.oyama.probeAsset(turnaroundId);
+        for (const fraction of [0, 0.25, 0.5, 0.75])
+          await window.oyama.extractFrame({
+            assetId: turnaroundId,
+            seconds: metadata.duration * fraction,
+          });
+        await refreshLibrary();
+        useShell.getState().navigate('assets');
+      });
+    } finally {
+      setSavingViews(false);
+    }
+  };
   const generate = async () => {
     setSubmitting(true);
     try {
@@ -232,7 +289,7 @@ export function LtxComposer() {
     }
   };
   const tabs =
-    settings.mode === 'image'
+    settings.mode !== 'text'
       ? ['Prompt', 'References', 'MSR', 'Negative']
       : ['Prompt', 'MSR', 'Negative'];
   const visibleTab = tabs.includes(tab) ? tab : 'Prompt';
@@ -264,7 +321,7 @@ export function LtxComposer() {
                   !submitting &&
                   availability.ready &&
                   settings.prompt.trim() &&
-                  (settings.mode !== 'image' || settings.firstFrame) &&
+                  (settings.mode === 'text' || settings.firstFrame) &&
                   (!settings.msr.enabled || settings.msr.pic1)
                 )
                   void generate();
@@ -288,12 +345,21 @@ export function LtxComposer() {
         <span className="muted">
           {settings.width} × {settings.height} · {settings.duration}s · 24 FPS
         </span>
-        {settings.mode === 'image' && (
+        {settings.mode !== 'text' && (
           <button
             className="smallbtn"
             onClick={() => useShell.setState({ composerTab: 'References' })}
           >
             First frame
+          </button>
+        )}
+        {settings.mode === 'turnaround' && (
+          <button
+            className="smallbtn"
+            disabled={!turnaroundId || savingViews}
+            onClick={() => void saveViews()}
+          >
+            {savingViews ? 'Saving views…' : 'Save 4 views'}
           </button>
         )}
         <button
@@ -302,12 +368,12 @@ export function LtxComposer() {
             submitting ||
             !settings.prompt.trim() ||
             !availability.ready ||
-            (settings.mode === 'image' && !settings.firstFrame) ||
+            (settings.mode !== 'text' && !settings.firstFrame) ||
             (settings.msr.enabled && !settings.msr.pic1)
           }
           title={
             availability.ready
-              ? settings.mode === 'image' && !settings.firstFrame
+              ? settings.mode !== 'text' && !settings.firstFrame
                 ? 'Choose a first frame'
                 : 'Generate LTX video'
               : availability.message

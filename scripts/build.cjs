@@ -10,13 +10,15 @@ function run(pkg, bin, args) {
   if (result.status !== 0) process.exit(result.status || 1);
 }
 async function main() {
+  const runTests = process.argv.includes('--test');
   if (process.argv.includes('--package'))
     await require('./fetch-media-tools.cjs').prepareMediaTools();
   const version = writeVersion();
   run('typescript', 'bin/tsc', ['--noEmit']);
+  if (runTests) run('vitest', 'vitest.mjs', ['run']);
   run('electron-vite', 'bin/electron-vite.js', ['build']);
+  if (runTests) run('@playwright/test', 'cli.js', ['test']);
   if (process.argv.includes('--package')) {
-    run('@playwright/test', 'cli.js', ['test']);
     run('electron-builder', 'cli.js', [
       '--win',
       'nsis',

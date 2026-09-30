@@ -2,14 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import * as Menu from '@radix-ui/react-dropdown-menu';
 import {
   Sparkles,
-  Crosshair,
   Layers,
   UserRound,
   Image,
   Play,
-  SquareDashed,
-  ArrowUpRight,
-  Settings,
   MapPin,
   Shirt,
   FolderOpen,
@@ -91,6 +87,27 @@ function TitleBar() {
 function MenuBar({ resetLayout }: { resetLayout: () => void }) {
   const area = useShell((s) => s.area);
   const navigate = useShell((s) => s.navigate);
+  const menuRef = useRef<HTMLElement>(null);
+  const [openMenu, setOpenMenu] = useState<string | null>(null);
+  useEffect(() => {
+    const accessMenu = (event: KeyboardEvent) => {
+      if (useShell.getState().modal || event.ctrlKey || event.metaKey) return;
+      if (event.key === 'Alt') {
+        event.preventDefault();
+        menuRef.current?.querySelector<HTMLButtonElement>('.menuitem')?.focus();
+      } else if (event.altKey) {
+        const trigger = Array.from(
+          menuRef.current?.querySelectorAll<HTMLButtonElement>('.menuitem') || [],
+        ).find((button) => button.textContent?.[0].toLowerCase() === event.key.toLowerCase());
+        if (trigger) {
+          event.preventDefault();
+          setOpenMenu(trigger.textContent);
+        }
+      }
+    };
+    window.addEventListener('keydown', accessMenu);
+    return () => window.removeEventListener('keydown', accessMenu);
+  }, []);
   const menuItems: Record<string, [string, () => void][]> = {
     File: [
       ['Projects…', () => navigate('projects')],
@@ -137,9 +154,13 @@ function MenuBar({ resetLayout }: { resetLayout: () => void }) {
     Help: [['About CreateSpace', () => useShell.setState({ modal: 'about' })]],
   };
   return (
-    <nav className="menubar" aria-label="Application menu">
+    <nav ref={menuRef} className="menubar" aria-label="Application menu">
       {Object.entries(menuItems).map(([name, items]) => (
-        <Menu.Root key={name}>
+        <Menu.Root
+          key={name}
+          open={openMenu === name}
+          onOpenChange={(open) => setOpenMenu(open ? name : null)}
+        >
           <Menu.Trigger className="menuitem">{name}</Menu.Trigger>
           <Menu.Portal>
             <Menu.Content className="dropdown" sideOffset={4}>
@@ -171,45 +192,6 @@ function MenuBar({ resetLayout }: { resetLayout: () => void }) {
         </button>
       </div>
     </nav>
-  );
-}
-function ToolRail() {
-  const area = useShell((s) => s.area);
-  const navigate = useShell((s) => s.navigate);
-  const tools = [
-    { title: 'Generate', icon: Sparkles, area: 'h3' },
-    { title: 'Select assets', icon: Crosshair, area: 'assets' },
-    { title: 'References', icon: Layers, area: 'assets' },
-    { title: 'Character', icon: UserRound, area: 'characters' },
-    { title: 'Image', icon: Image, area: 'zimage' },
-    { title: 'Video', icon: Play, area: 'h3' },
-    { title: 'Mask · coming later', icon: SquareDashed },
-    { title: 'Upscale · coming later', icon: ArrowUpRight },
-  ];
-  return (
-    <aside className="toolrail" aria-label="Tools">
-      {tools.map((tool, i) => (
-        <button
-          key={tool.title}
-          className={`tool ${area === tool.area ? 'active' : ''} ${i === 4 ? 'tool-separated' : ''}`}
-          title={tool.title}
-          aria-label={tool.title}
-          onClick={() =>
-            tool.area ? navigate(tool.area) : useShell.setState({ modal: 'modules' })
-          }
-        >
-          <tool.icon size={16} />
-        </button>
-      ))}
-      <button
-        className="tool bottom"
-        title="Settings"
-        aria-label="Settings"
-        onClick={() => useShell.setState({ modal: 'settings' })}
-      >
-        <Settings size={16} />
-      </button>
-    </aside>
   );
 }
 function NavigationPanel() {
@@ -399,7 +381,6 @@ function Inspector({
   const tab = useShell((s) => s.inspectorTab);
   const ready = useSettings((s) => s.readiness);
   const module = modules[area];
-  if (area === 'modeling') return <aside className="rightpanel" />;
   if (area === 'movie') return <MovieSidebar width={movieSidebarWidth} onResize={onMovieResize} />;
   return (
     <aside className="rightpanel">
@@ -443,8 +424,8 @@ function Inspector({
         <Section title="Workspace">
           <p className="muted">{module?.definition.description}</p>
           <p className="muted">
-            Records are saved locally. Global characters, locations and wardrobes can be attached to any
-            project.
+            Records are saved locally. Global characters, locations and wardrobes can be attached to
+            any project.
           </p>
         </Section>
       )}
@@ -597,10 +578,9 @@ export function App() {
         <div
           className="body"
           style={{
-            gridTemplateColumns: `var(--tool) ${layout.leftOpen ? `min(${layout.leftWidth}px, calc((100vw - var(--tool) - 370px) / ${Number(layout.leftOpen) + Number(layout.rightOpen)}))` : '0px'} ${layout.leftOpen ? '5px' : '0px'} minmax(0, 1fr) ${layout.rightOpen ? '5px' : '0px'} ${layout.rightOpen ? `min(${layout.rightWidth}px, calc((100vw - var(--tool) - 370px) / ${Number(layout.leftOpen) + Number(layout.rightOpen)}))` : '0px'}`,
+            gridTemplateColumns: `${layout.leftOpen ? `min(${layout.leftWidth}px, calc((100vw - 370px) / ${Number(layout.leftOpen) + Number(layout.rightOpen)}))` : '0px'} ${layout.leftOpen ? '5px' : '0px'} minmax(0, 1fr) ${layout.rightOpen ? '5px' : '0px'} ${layout.rightOpen ? `min(${layout.rightWidth}px, calc((100vw - 370px) / ${Number(layout.leftOpen) + Number(layout.rightOpen)}))` : '0px'}`,
           }}
         >
-          <ToolRail />
           <div
             className="workspace-dock left-dock"
             onDragOver={(event) => event.preventDefault()}

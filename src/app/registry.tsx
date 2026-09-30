@@ -24,7 +24,8 @@ import { WardrobeWorkspace } from '../modules/wardrobe';
 import { PreviewPanel } from '../components/PreviewPanel';
 import { LogsWorkspace, LogsInspector } from '../modules/logs';
 import { MovieWorkspace } from '../modules/movie';
-import { ModelingWorkspace } from '../modules/modeling';
+import { ModelingWorkspace, ModelingComposer, ModelingInspector } from '../modules/modeling';
+import { modelingDefinition } from '../modules/modeling/definition';
 export interface WorkspaceModule {
   definition: ModuleDefinition;
   Workspace: ComponentType;
@@ -39,7 +40,12 @@ const definition = (id: string, title: string): ModuleDefinition => ({
   description: title,
 });
 export const modules: Record<string, WorkspaceModule> = {
-  modeling: { definition: definition('modeling', 'Modeling'), Workspace: ModelingWorkspace },
+  modeling: {
+    definition: modelingDefinition,
+    Workspace: ModelingWorkspace,
+    Composer: ModelingComposer,
+    Inspector: ModelingInspector,
+  },
   logs: {
     definition: definition('logs', 'Application log'),
     Workspace: LogsWorkspace,
