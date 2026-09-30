@@ -11,6 +11,7 @@ import {
   ArrowUpRight,
   Settings,
   MapPin,
+  Shirt,
   FolderOpen,
   History,
   Box,
@@ -116,8 +117,10 @@ function MenuBar({ resetLayout }: { resetLayout: () => void }) {
       ['Photo Edit', () => navigate('photo-edit')],
       ['Continue / Extend', () => navigate('continue')],
       ['Movie', () => navigate('movie')],
+      ['Modeling', () => navigate('modeling')],
       ['Characters', () => navigate('characters')],
       ['Locations', () => navigate('locations')],
+      ['Wardrobe', () => navigate('wardrobe')],
     ],
     View: [
       ['Reset workspace layout', resetLayout],
@@ -246,8 +249,10 @@ function NavigationPanel() {
         {item('Photo Edit', 'photo-edit', Image, 'ON')}
         {item('Continue / Extend', 'continue', Play, 'ON')}
         {item('Movie', 'movie', Play)}
+        {item('Modeling', 'modeling', Box)}
         {item('Characters', 'characters', UserRound)}
         {item('Locations', 'locations', MapPin)}
+        {item('Wardrobe', 'wardrobe', Shirt)}
         {item('References', 'references', Layers, undefined, () => {
           patchDraft({ mode: 'reference', modeExplicit: true }, 'h3');
           navigate('h3');
@@ -394,6 +399,7 @@ function Inspector({
   const tab = useShell((s) => s.inspectorTab);
   const ready = useSettings((s) => s.readiness);
   const module = modules[area];
+  if (area === 'modeling') return <aside className="rightpanel" />;
   if (area === 'movie') return <MovieSidebar width={movieSidebarWidth} onResize={onMovieResize} />;
   return (
     <aside className="rightpanel">
@@ -437,7 +443,7 @@ function Inspector({
         <Section title="Workspace">
           <p className="muted">{module?.definition.description}</p>
           <p className="muted">
-            Records are saved locally. Global characters and locations can be attached to any
+            Records are saved locally. Global characters, locations and wardrobes can be attached to any
             project.
           </p>
         </Section>

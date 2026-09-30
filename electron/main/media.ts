@@ -101,13 +101,25 @@ export class MediaService {
     );
     return parseProbe(JSON.parse(stdout));
   }
-  async extractFrame(source: string, target: string, seconds: number): Promise<void> {
+  async extractFrame(
+    source: string,
+    target: string,
+    seconds: number,
+    frame?: number,
+  ): Promise<void> {
     if (path.extname(target).toLowerCase() !== '.png')
       throw new Error('Extracted frame must be a PNG.');
     const metadata = await this.probe(source);
     if (!metadata.video) throw new Error('Media has no video frames.');
     if (!Number.isFinite(seconds) || seconds < 0 || seconds >= metadata.duration)
       throw new Error('Frame time is outside the source video.');
+    if (
+      frame !== undefined &&
+      (!Number.isInteger(frame) ||
+        frame < 0 ||
+        (metadata.video.frames !== undefined && frame >= metadata.video.frames))
+    )
+      throw new Error('Frame index is outside the source video.');
     await fs.mkdir(path.dirname(target), { recursive: true });
     try {
       await runFile(
@@ -119,8 +131,9 @@ export class MediaService {
           'error',
           '-i',
           source,
-          '-ss',
-          String(seconds),
+          ...(frame === undefined
+            ? ['-ss', String(seconds)]
+            : ['-vf', `select=eq(n\\,${frame})`, '-vsync', '0']),
           '-frames:v',
           '1',
           '-y',

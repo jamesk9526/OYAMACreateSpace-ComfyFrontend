@@ -1,4 +1,5 @@
 import type { Asset, Draft, Job, LibraryRecord } from '../../shared/domain';
+import { activeRecordAssetIds } from '../../shared/record-media';
 import type { Store } from './database';
 import { continueAdapter } from '../../src/modules/continue/adapter';
 import type {
@@ -87,29 +88,58 @@ export const generatorAdapters: Record<string, GeneratorAdapter> = {
     mockFilename: 'Mock-H3-preview.mp4',
     resolve(draft, records, asset) {
       const s = h3Schema.parse(draft.values);
-      let attached = [...s.characterIds, ...s.locationIds].flatMap((id) => {
+      let attached = [
+        ...s.characterIds.map((id) => [id, 'character'] as const),
+        ...s.locationIds.map((id) => [id, 'location'] as const),
+        ...s.wardrobeIds.map((id) => [id, 'wardrobe'] as const),
+      ].flatMap(([id, kind]) => {
         const record = records.find((r) => r.id === id);
         if (!record && s.modeExplicit && s.mode !== 'reference') return [];
-        if (!record) throw new Error('Attached character or location is missing');
+        if (!record) throw new Error('Attached library record is missing');
+        if (record.kind !== kind) throw new Error(`Attached ${kind} has the wrong record type.`);
+        if (
+          record.kind === 'wardrobe' &&
+          record.characterId &&
+          (s.mode === 'reference' || !s.modeExplicit) &&
+          !s.characterIds.includes(record.characterId)
+        )
+          throw new Error(`Attach the bound character before using wardrobe ${record.name}.`);
         return [record];
       });
       // Older drafts could retain reference media while still selecting Text to Video.
       if (
         s.mode === 'text' &&
         !s.modeExplicit &&
-        (s.references.length || attached.some((r) => r.assetIds.length))
+        (s.references.length ||
+          attached.some((r) => activeRecordAssetIds(r, r.assetIds.map(asset)).length))
       )
         s.mode = 'reference';
       if (
         s.mode !== 'reference' &&
         !s.modeExplicit &&
-        (s.references.length || attached.some((r) => r.assetIds.length))
+        (s.references.length ||
+          attached.some((r) => activeRecordAssetIds(r, r.assetIds.map(asset)).length))
       )
-        throw new Error('Use Ref2VA to apply attached character/location/reference media.');
+        throw new Error('Use Ref2VA to apply attached library/reference media.');
       if (s.mode !== 'reference') {
         s.references = [];
-        attached = s.modeExplicit ? [] : attached.filter((record) => record.assetIds.length === 0);
-      } else s.references = [...new Set([...s.references, ...attached.flatMap((r) => r.assetIds)])];
+        attached = s.modeExplicit
+          ? []
+          : attached.filter(
+              (record) => activeRecordAssetIds(record, record.assetIds.map(asset)).length === 0,
+            );
+      } else
+        for (const record of attached)
+          for (const id of record.assetIds)
+            if (asset(id).projectId !== null)
+              throw new Error('Reusable record reference belongs to a different project scope.');
+      if (s.mode === 'reference')
+        s.references = [
+          ...new Set([
+            ...s.references,
+            ...attached.flatMap((r) => activeRecordAssetIds(r, r.assetIds.map(asset))),
+          ]),
+        ];
       if (s.mode === 'image' && !s.firstFrame)
         throw new Error('Choose a first frame for Image to Video.');
       if (s.mode === 'reference' && !s.references.length)
@@ -139,7 +169,10 @@ export const generatorAdapters: Record<string, GeneratorAdapter> = {
         s.style.trim(),
         ...attached.map(
           (r) =>
-            `${r.name}: ${r.description} ${r.assetIds
+            `${r.kind === 'wardrobe' ? 'Wardrobe' : r.kind} ${r.name}: ${r.description}${r.kind === 'wardrobe' ? ` Colors: ${r.colors || 'unspecified'}. Materials: ${r.materials || 'unspecified'}. Style: ${r.visualStyle || 'unspecified'}.` : ''}${r.kind === 'character' ? ` Identity: ${r.identityNotes || 'unspecified'}. Voice: ${r.voice || 'unspecified'}.` : ''}${r.kind === 'location' ? ` Environment: ${r.environment || 'unspecified'}. Time: ${r.timeOfDay || 'unspecified'}. Lighting: ${r.lighting || 'unspecified'}. Atmosphere: ${r.atmosphere || 'unspecified'}. Accuracy: ${r.accuracyNotes || 'unspecified'}.` : ''} ${activeRecordAssetIds(
+              r,
+              r.assetIds.map(asset),
+            )
               .map((id) => referenceLabels.get(id))
               .filter(Boolean)
               .join(' ')}`,

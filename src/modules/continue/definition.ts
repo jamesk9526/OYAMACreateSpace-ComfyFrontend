@@ -1,10 +1,13 @@
 import { resolutionFields } from '../../../shared/resolution';
 import { z } from 'zod';
 import type { Asset, Readiness } from '../../../shared/domain';
+import { beatReplacementsSchema } from '../../../shared/continuation';
 import { rippleSourceDuration } from '../ripple/definition';
 import type { ModuleAvailability, ModuleDefinition } from '../../../shared/modules';
 
 export const continueSchema = z.object({
+  replacements: beatReplacementsSchema.optional(),
+  sourceBeatJobId: z.string().uuid().optional(),
   dialoguePolicy: z.enum(['inherit', 'none', 'allow']).default('inherit'),
   audioCarry: z.boolean().default(true),
   blendFrames: z.number().int().min(0).max(24).default(0),

@@ -52,6 +52,18 @@ export class ContinuationSequenceRunner {
     const beatIds = lineageBeatIds(script.beats, targetBeatId);
     if (beatIds.some((id) => !script.beats.find((beat) => beat.id === id)?.prompt.trim()))
       throw new Error('Every beat in the selected lineage needs an action prompt.');
+    for (const beatId of beatIds) {
+      const beat = script.beats.find((item) => item.id === beatId)!;
+      for (const [field, kind] of [
+        ['characterId', 'character'],
+        ['locationId', 'location'],
+        ['wardrobeId', 'wardrobe'],
+      ] as const) {
+        const id = beat.replacements?.[field];
+        if (id && this.store.record(id).kind !== kind)
+          throw new Error(`${beat.name}: replacement ${kind} is unavailable.`);
+      }
+    }
     const settings = continueSchema.parse(script.settings);
     if (this.store.jobs().some((job) => job.sequence?.script.id === scriptId && active(job)))
       throw new Error('This script already has an active sequence.');
@@ -173,6 +185,14 @@ export class ContinuationSequenceRunner {
       if (source.kind !== 'video' || !existsSync(this.store.assetPath(source.id)))
         throw new Error(`Source for beat ${beat.name} is unavailable.`);
       const continuity = scriptContinuitySchema.parse(sequence.script.continuity);
+      const previousBeatId = sequence.beatIds[index - 1];
+      const previousResult = previousBeatId
+        ? this.store
+            .continuationScript(sequence.script.id)
+            .beats.find((item) => item.id === previousBeatId)?.result
+        : undefined;
+      if (previousBeatId && (!previousResult || previousResult.assetIds[0] !== sourceId))
+        throw new Error(`Prior beat context for ${beat.name} is unavailable.`);
       const draft = {
         projectId: parent.projectId,
         moduleId: 'continue',
@@ -187,6 +207,8 @@ export class ContinuationSequenceRunner {
           duration: beat.duration,
           method: beat.method,
           selectedSeconds: beat.selectedSeconds,
+          replacements: beat.replacements,
+          sourceBeatJobId: previousResult?.jobId,
         },
       };
       // A child is persisted before its network submission. On restart, the parent discovers it by beat ID.

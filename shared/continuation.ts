@@ -4,6 +4,11 @@ const beatSourceSchema = z.discriminatedUnion('kind', [
   z.object({ kind: z.literal('previous') }),
   z.object({ kind: z.literal('beat'), beatId: z.string().uuid() }),
 ]);
+export const beatReplacementsSchema = z.object({
+  characterId: z.string().uuid().nullable().optional(),
+  locationId: z.string().uuid().nullable().optional(),
+  wardrobeId: z.string().uuid().nullable().optional(),
+});
 export const scriptContinuitySchema = z
   .object({
     dialoguePolicy: z.enum(['inherit', 'none', 'allow']).default('inherit'),
@@ -16,6 +21,7 @@ export const scriptBeatSchema = z.object({
   name: z.string().trim().min(1).max(100),
   prompt: z.string().max(10000),
   camera: z.string().max(1000).optional(),
+  replacements: beatReplacementsSchema.optional(),
   duration: z.number().min(1).max(15).multipleOf(0.5),
   method: z.enum(['last', 'selected', 'motion']).default('last'),
   selectedSeconds: z.number().finite().min(0).max(300).default(0),
@@ -112,6 +118,7 @@ export function reconcileScript(
     JSON.stringify([
       beat.prompt,
       beat.camera || '',
+      beat.replacements || {},
       beat.duration,
       beat.method,
       beat.selectedSeconds,

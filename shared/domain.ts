@@ -42,10 +42,36 @@ export const draftSchema = z.object({
 export type Draft = z.infer<typeof draftSchema>;
 export const recordSchema = z.object({
   id: idSchema,
-  kind: z.enum(['character', 'location']),
+  kind: z.enum(['character', 'location', 'wardrobe']),
   name: z.string().trim().min(1).max(100),
   description: z.string().max(10000),
   assetIds: z.array(idSchema).max(32),
+  characterId: idSchema.nullable().optional(),
+  colors: z.string().max(2000).optional(),
+  materials: z.string().max(2000).optional(),
+  visualStyle: z.string().max(2000).optional(),
+  approvedAssetIds: z.array(idSchema).max(16).optional(),
+  coverAssetId: idSchema.nullable().optional(),
+  masterAssetId: idSchema.nullable().optional(),
+  turntableAssetId: idSchema.nullable().optional(),
+  angleSamples: z
+    .array(
+      z.object({
+        assetId: idSchema,
+        label: z.enum(['Front', 'Front three-quarter', 'Profile', 'Back three-quarter', 'Back']),
+        frame: z.number().int().nonnegative(),
+        seconds: z.number().finite().nonnegative(),
+      }),
+    )
+    .max(5)
+    .optional(),
+  identityNotes: z.string().max(4000).optional(),
+  voice: z.string().max(2000).optional(),
+  environment: z.string().max(4000).optional(),
+  timeOfDay: z.string().max(1000).optional(),
+  lighting: z.string().max(2000).optional(),
+  atmosphere: z.string().max(2000).optional(),
+  accuracyNotes: z.string().max(4000).optional(),
 });
 export type LibraryRecord = z.infer<typeof recordSchema>;
 export type Project = { id: string; name: string; createdAt: string };
@@ -53,7 +79,7 @@ export type Asset = {
   id: string;
   projectId: string | null;
   name: string;
-  kind: 'image' | 'video' | 'audio';
+  kind: 'image' | 'video' | 'audio' | 'model';
   mime: string;
   url: string;
   createdAt: string;
@@ -100,6 +126,9 @@ export type Job = {
   snapshot: Record<string, unknown>;
   templateVersion: string;
   assetIds: string[];
+  libraryImageTarget?:
+    { kind: 'assets' } | { kind: 'record'; recordId: string; purpose: 'master' | 'reference' };
+  libraryImageAssetId?: string;
   rawAssetIds?: string[];
   preview?: string;
   batch?: RippleBatchState;
@@ -129,6 +158,26 @@ export type Bootstrap = {
 export type AppEvent =
   { type: 'job'; job: Job } | { type: 'library' } | { type: 'connection'; readiness: Readiness };
 export type ImportRequest = { projectId: string | null };
+export const libraryImageRequestSchema = z.object({
+  projectId: idSchema,
+  target: z.discriminatedUnion('kind', [
+    z.object({ kind: z.literal('assets') }),
+    z.object({
+      kind: z.literal('record'),
+      recordId: idSchema,
+      purpose: z.enum(['master', 'reference']),
+    }),
+  ]),
+  values: z.record(z.string(), z.unknown()),
+});
+export type LibraryImageRequest = z.infer<typeof libraryImageRequestSchema>;
+export const attachRecordImageSchema = z.object({
+  projectId: idSchema,
+  recordId: idSchema,
+  assetId: idSchema,
+  purpose: z.enum(['master', 'reference']),
+});
+export type AttachRecordImageRequest = z.infer<typeof attachRecordImageSchema>;
 export type MovieImportRequest = { projectId: string; source: 'files' | 'folder' };
 export const assetHandoffSchema = z.object({
   assetId: idSchema,
@@ -169,6 +218,7 @@ export type MediaProbe = {
 export const frameRequestSchema = z.object({
   assetId: idSchema,
   seconds: z.number().finite().nonnegative(),
+  frame: z.number().int().nonnegative().optional(),
 });
 export type FrameRequest = z.infer<typeof frameRequestSchema>;
 export const clipRequestSchema = z
@@ -208,6 +258,9 @@ export interface DesktopAPI {
   saveMovieTimeline(timeline: MovieTimeline): Promise<MovieTimeline>;
   checkConnection(): Promise<Readiness>;
   generate(draft: Draft): Promise<Job>;
+  generateLibraryImage(request: LibraryImageRequest): Promise<Job>;
+  useLibraryImage(jobId: string): Promise<Asset>;
+  attachRecordImage(request: AttachRecordImageRequest): Promise<LibraryRecord>;
   cancelJob(id: string): Promise<void>;
   resumeBatchJob(id: string): Promise<Job>;
   windowAction(action: 'minimize' | 'maximize' | 'close'): Promise<void>;
@@ -242,6 +295,9 @@ export const ipcChannels = [
   'saveMovieTimeline',
   'checkConnection',
   'generate',
+  'generateLibraryImage',
+  'useLibraryImage',
+  'attachRecordImage',
   'cancelJob',
   'resumeBatchJob',
   'windowAction',

@@ -11,6 +11,8 @@ import {
   clipRequestSchema,
   recordSchema,
   recordPromotionSchema,
+  libraryImageRequestSchema,
+  attachRecordImageSchema,
   settingsSchema,
   type AppEvent,
   type Readiness,
@@ -20,12 +22,14 @@ import { ComfyBridge } from './comfy';
 import { generatorAdapters } from './modules';
 import { MediaService } from './media';
 import { mediaResponse } from './media-protocol';
+import { thumbnailPath } from './thumbnails';
 import version from '../../.generated/version.json';
 import { AppLogger } from './logs';
 import { rendererLogSchema } from '../../shared/logs';
 import { continuationScriptSchema } from '../../shared/continuation';
 import { RippleBatchRunner } from './ripple-batch';
 import { ContinuationSequenceRunner } from './continuation-sequence';
+import { zImageSchema } from '../../src/modules/zimage/definition';
 import { movieTimelineSchema } from '../../shared/movie-timeline';
 
 protocol.registerSchemesAsPrivileged([
@@ -108,9 +112,22 @@ else
       protocol.handle('oyama', async (request) => {
         try {
           const url = new URL(request.url);
-          if (url.hostname !== 'media' || !['GET', 'HEAD'].includes(request.method))
+          if (
+            !['media', 'thumbnail'].includes(url.hostname) ||
+            !['GET', 'HEAD'].includes(request.method)
+          )
             return new Response('Not found', { status: 404 });
           const id = idSchema.parse(url.pathname.slice(1));
+          if (url.hostname === 'thumbnail') {
+            const asset = store.asset(id);
+            const thumbnail = await thumbnailPath(
+              asset,
+              store.assetPath(id),
+              path.join(app.getPath('userData'), 'thumbnails'),
+              process.resourcesPath,
+            );
+            return await mediaResponse(request, thumbnail, 'image/png');
+          }
           return await mediaResponse(request, store.assetPath(id), store.asset(id).mime);
         } catch {
           return new Response('Asset unavailable', { status: 404 });
@@ -430,6 +447,7 @@ else
             store.assetPath(source.id),
             target,
             request.seconds,
+            request.frame,
           );
           const frame = await store.importFile(
             target,
@@ -481,6 +499,61 @@ else
         return draft.moduleId === 'ripple' && draft.values.mode === 'long'
           ? rippleBatches.start(draft)
           : bridge.start(draft);
+      });
+      handle('generateLibraryImage', (value) => {
+        const request = libraryImageRequestSchema.parse(value);
+        const values = zImageSchema.parse(request.values);
+        if (!values.prompt.trim()) throw new Error('Describe the image first.');
+        if (request.target.kind === 'record') {
+          const record = store.record(request.target.recordId);
+          if (request.target.purpose === 'master' && record.kind !== 'character')
+            throw new Error('Only a character can receive a master image.');
+        }
+        return bridge.start(
+          { projectId: request.projectId, moduleId: 'zimage', values },
+          undefined,
+          request.target,
+        );
+      });
+      handle('attachRecordImage', async (value) => {
+        const request = attachRecordImageSchema.parse(value);
+        const record = await store.attachRecordImage(request);
+        send({ type: 'library' });
+        return record;
+      });
+      handle('useLibraryImage', async (value) => {
+        const job = store.jobs().find((candidate) => candidate.id === idSchema.parse(value));
+        if (
+          !job ||
+          job.moduleId !== 'zimage' ||
+          job.status !== 'complete' ||
+          !job.libraryImageTarget
+        )
+          throw new Error('Completed library image job not found.');
+        const asset = store.asset(job.assetIds[0]);
+        if (asset.kind !== 'image' || asset.projectId !== job.projectId)
+          throw new Error('Library image output is unavailable.');
+        if (job.libraryImageTarget.kind === 'assets') {
+          job.libraryImageAssetId = asset.id;
+          store.saveJob(job);
+          send({ type: 'job', job });
+          return asset;
+        }
+        if (job.libraryImageAssetId) return store.asset(job.libraryImageAssetId);
+        const record = await store.attachRecordImage({
+          projectId: job.projectId,
+          recordId: job.libraryImageTarget.recordId,
+          assetId: asset.id,
+          purpose: job.libraryImageTarget.purpose,
+        });
+        job.libraryImageAssetId =
+          record.masterAssetId && job.libraryImageTarget.purpose === 'master'
+            ? record.masterAssetId
+            : record.assetIds[record.assetIds.length - 1];
+        store.saveJob(job);
+        send({ type: 'job', job });
+        send({ type: 'library' });
+        return store.asset(job.libraryImageAssetId);
       });
       handle('resumeBatchJob', (id) => rippleBatches.resume(idSchema.parse(id)));
       handle('cancelJob', async (id) => {

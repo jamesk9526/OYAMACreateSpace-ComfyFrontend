@@ -27,6 +27,7 @@ export const h3Schema = z.object({
   lastFrame: z.string().uuid().nullable().default(null),
   characterIds: z.array(z.string().uuid()).max(16).default([]),
   locationIds: z.array(z.string().uuid()).max(16).default([]),
+  wardrobeIds: z.array(z.string().uuid()).max(16).default([]),
   style: z.string().max(4000).default(''),
 });
 export type H3Settings = z.infer<typeof h3Schema>;

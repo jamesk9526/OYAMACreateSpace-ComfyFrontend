@@ -1,6 +1,8 @@
 import { useRef, useState } from 'react';
 import { FileAudio, Film, Image, Plus, Download } from 'lucide-react';
 import { Empty } from '../../components/ui';
+import { Modal } from '../../components/ui';
+import { AssetThumbnail, LibraryImageGenerator } from '../../components/LibraryImageGenerator';
 import { draftKey, guarded, refreshLibrary, useDrafts, useLibrary, useShell } from '../../stores';
 import type { Asset } from '../../../shared/domain';
 
@@ -112,6 +114,7 @@ export function AssetsWorkspace() {
   const projectId = useShell((s) => s.projectId);
   const assets = useLibrary((s) => s.assets);
   const [query, setQuery] = useState('');
+  const [generatorOpen, setGeneratorOpen] = useState(false);
   const video = useRef<HTMLVideoElement>(null);
   const selectedId = useShell((s) => s.selectedAsset);
   const selected = assets.find((a) => a.id === selectedId);
@@ -127,17 +130,22 @@ export function AssetsWorkspace() {
           <h1>Assets & References</h1>
           <p>Managed project media and shared library references.</p>
         </div>
-        <button
-          className="smallbtn"
-          onClick={() =>
-            void guarded(async () => {
-              await window.oyama.importMedia({ projectId });
-              await refreshLibrary();
-            })
-          }
-        >
-          <Plus size={13} /> Import media
-        </button>
+        <div className="row-actions">
+          <button className="smallbtn" onClick={() => setGeneratorOpen(true)}>
+            Generate image here
+          </button>
+          <button
+            className="smallbtn"
+            onClick={() =>
+              void guarded(async () => {
+                await window.oyama.importMedia({ projectId });
+                await refreshLibrary();
+              })
+            }
+          >
+            <Plus size={13} /> Import media
+          </button>
+        </div>
       </header>
       <input
         className="control search"
@@ -160,8 +168,8 @@ export function AssetsWorkspace() {
                 className={`asset-card ${selectedId === a.id ? 'selected' : ''}`}
                 onClick={() => useShell.setState({ selectedAsset: a.id })}
               >
-                {a.kind === 'image' && !a.missing ? (
-                  <img src={a.url} alt="" loading="lazy" />
+                {(a.kind === 'image' || a.kind === 'video') && !a.missing ? (
+                  <AssetThumbnail asset={a} />
                 ) : (
                   <div className="asset-placeholder">
                     <Icon size={24} />
@@ -269,6 +277,23 @@ export function AssetsWorkspace() {
           )}
         </div>
       )}
+      <Modal
+        open={generatorOpen}
+        onClose={() => setGeneratorOpen(false)}
+        title="Generate asset image"
+        description="Create and review a managed image in this project."
+      >
+        <LibraryImageGenerator
+          target={{ kind: 'assets' }}
+          prompt=""
+          width={1344}
+          height={768}
+          onUse={(asset) => {
+            useShell.setState({ selectedAsset: asset.id });
+            setGeneratorOpen(false);
+          }}
+        />
+      </Modal>
     </div>
   );
 }

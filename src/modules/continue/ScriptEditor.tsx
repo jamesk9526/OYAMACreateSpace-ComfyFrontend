@@ -15,6 +15,7 @@ import { PromptInput } from '../../components/PromptInput';
 export function ScriptEditor({ settings }: { settings: ContinueSettings }) {
   const projectId = useShell((state) => state.projectId);
   const assets = useLibrary((state) => state.assets);
+  const records = useLibrary((state) => state.records);
   const jobs = useJobs((state) => state.jobs);
   const [scripts, setScripts] = useState<ContinuationScript[]>([]);
   const [draft, setDraft] = useState<ContinuationScriptInput>();
@@ -426,6 +427,60 @@ export function ScriptEditor({ settings }: { settings: ContinueSettings }) {
                     />
                   </Field>
                   <div className="script-beat-settings">
+                    {(
+                      [
+                        ['characterId', 'character'],
+                        ['locationId', 'location'],
+                        ['wardrobeId', 'wardrobe'],
+                      ] as const
+                    ).map(([field, recordKind]) => (
+                      <Field key={field} label={`Change ${recordKind}`}>
+                        <select
+                          className="control"
+                          aria-label={`Beat ${index + 1} ${recordKind} change`}
+                          value={
+                            beat.replacements?.[field] === undefined
+                              ? 'keep'
+                              : beat.replacements[field] === null
+                                ? 'clear'
+                                : beat.replacements[field]
+                          }
+                          onChange={(event) => {
+                            const choice = event.target.value;
+                            const id =
+                              choice === 'keep' ? undefined : choice === 'clear' ? null : choice;
+                            const record = records.find((item) => item.id === id);
+                            updateBeat(beat.id, {
+                              replacements: {
+                                ...beat.replacements,
+                                [field]: id,
+                                ...(field === 'wardrobeId' && record?.characterId
+                                  ? { characterId: record.characterId }
+                                  : {}),
+                              },
+                            });
+                          }}
+                        >
+                          <option value="keep">Keep from source</option>
+                          <option value="clear">Remove</option>
+                          {records
+                            .filter((record) => record.kind === recordKind)
+                            .map((record) => (
+                              <option key={record.id} value={record.id}>
+                                {record.name}
+                              </option>
+                            ))}
+                          {beat.replacements?.[field] &&
+                            !records.some((record) => record.id === beat.replacements?.[field]) && (
+                              <option value={beat.replacements[field]!}>
+                                Missing record · choose another
+                              </option>
+                            )}
+                        </select>
+                      </Field>
+                    ))}
+                  </div>
+                  <div className="script-beat-settings">
                     <Field label="Requested seconds">
                       <input
                         className="control"
@@ -511,7 +566,8 @@ export function ScriptEditor({ settings }: { settings: ContinueSettings }) {
       )}
       <p className="muted">
         Render lineage follows the selected beat’s ancestors in order. Completed beats and their
-        joined videos remain available after cancellation or restart.
+        joined videos remain available after cancellation or restart. Character, location and
+        wardrobe changes guide H3’s prompt; the source frame remains the visual anchor.
       </p>
     </section>
   );

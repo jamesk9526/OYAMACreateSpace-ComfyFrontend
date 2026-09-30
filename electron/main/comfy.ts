@@ -54,7 +54,7 @@ export class ComfyBridge {
     private store: Store,
     private emit: (event: AppEvent) => void,
     readonly mock: boolean,
-    private mockSamples: Record<'image' | 'video' | 'audio', string | undefined>,
+    private mockSamples: Partial<Record<'image' | 'video' | 'audio' | 'model', string>>,
   ) {
     for (const job of store
       .jobs()
@@ -150,6 +150,8 @@ export class ComfyBridge {
           upscaler: nodeChoices(info, 'LatentUpscaleModelLoader', 'model_name'),
           msrLora: nodeChoices(info, 'ComfyUILTX25MSRICLoRALoader', 'lora_name'),
           gguf: nodeChoices(info, 'UnetLoaderGGUF', 'unet_name'),
+          vision: nodeChoices(info, 'CLIPVisionLoader', 'clip_name'),
+          backgroundRemoval: nodeChoices(info, 'LoadBackgroundRemovalModel', 'bg_removal_name'),
         },
       };
     } catch (error) {
@@ -179,6 +181,7 @@ export class ComfyBridge {
       routing: GpuRouting;
       sequenceBeatId?: string;
     },
+    libraryImageTarget?: Job['libraryImageTarget'],
   ): Promise<Job> {
     const adapter = generatorAdapters[draft.moduleId];
     if (!adapter) throw new Error('Generator unavailable');
@@ -188,10 +191,14 @@ export class ComfyBridge {
     const resolved = adapter.resolve(
       prepared,
       this.store.snapshot('', this.mock).records,
-      (id) => this.store.asset(id),
+      (id) => ({
+        ...this.store.asset(id),
+        missing: !fs.existsSync(this.store.assetPath(id)),
+      }),
       this.store.jobs(),
     );
-    if (!String(resolved.values.prompt).trim()) throw new Error('Describe your shot first.');
+    if (adapter.outputKind !== 'model' && !String(resolved.values.prompt).trim())
+      throw new Error('Describe your shot first.');
     const seed =
       resolved.values.seed === 'Random' ? randomInt(2147483647) : Number(resolved.values.seed);
     if (!Number.isSafeInteger(seed) || seed < 0 || seed > 4294967295)
@@ -225,9 +232,10 @@ export class ComfyBridge {
       },
       templateVersion: adapter.version,
       assetIds: [],
+      ...(libraryImageTarget ? { libraryImageTarget } : {}),
     };
     this.jobs.set(job.id, job);
-    if (!batch)
+    if (!batch && !libraryImageTarget)
       this.store.saveDraft(
         draft.moduleId === 'h3'
           ? { ...prepared, values: { ...prepared.values, mode: resolved.values.mode } }

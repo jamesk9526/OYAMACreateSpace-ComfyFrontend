@@ -9,6 +9,9 @@ import { compileContinue, continueOutputs, continueTemplateVersion } from './wor
 import { rippleSourceDuration } from '../ripple/definition';
 import { h3ContextContract } from '../h3/context';
 
+const snapshotIds = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((id): id is string => typeof id === 'string') : [];
+
 export const continueAdapter: GeneratorAdapter = {
   context: h3ContextContract,
   maxUploadBytes: 100 * 1024 * 1024,
@@ -54,7 +57,7 @@ export const continueAdapter: GeneratorAdapter = {
       await fs.rm(temporary, { force: true });
     }
   },
-  resolve(draft, _records, asset, jobs = []) {
+  resolve(draft, records, asset, jobs = []) {
     const settings = continueSchema.parse(draft.values);
     if (!settings.sourceVideo || (settings.method !== 'motion' && !settings.firstFrame))
       throw new Error('Source frame preparation is incomplete.');
@@ -68,14 +71,76 @@ export const continueAdapter: GeneratorAdapter = {
       )
     )
       throw new Error('Continuation inputs are invalid or belong to a different project.');
-    const sourceJob = jobs.find(
-      (job) => job.status === 'complete' && job.assetIds.includes(source.id),
+    const sourceJob = settings.sourceBeatJobId
+      ? jobs.find(
+          (job) =>
+            job.id === settings.sourceBeatJobId &&
+            job.projectId === draft.projectId &&
+            job.status === 'complete',
+        )
+      : (jobs.find(
+          (job) => job.status === 'complete' && !job.sequence && job.assetIds.includes(source.id),
+        ) ?? jobs.find((job) => job.status === 'complete' && job.assetIds.includes(source.id)));
+    if (settings.sourceBeatJobId && !sourceJob)
+      throw new Error('The prior beat job is unavailable for continuity.');
+    const snapshot = sourceJob?.snapshot || {};
+    const sourceCharacterIds = snapshotIds(
+      snapshot.effectiveCharacterIds ?? snapshot.characterIds ?? snapshot.sourceCharacterIds,
     );
+    const sourceLocationIds = snapshotIds(
+      snapshot.effectiveLocationIds ?? snapshot.locationIds ?? snapshot.sourceLocationIds,
+    );
+    const sourceWardrobeIds = snapshotIds(
+      snapshot.effectiveWardrobeIds ?? snapshot.wardrobeIds ?? snapshot.sourceWardrobeIds,
+    );
+    const changes = settings.replacements;
+    const select = (
+      field: 'characterId' | 'locationId' | 'wardrobeId',
+      kind: 'character' | 'location' | 'wardrobe',
+      inherited: string[],
+    ) => {
+      const id = changes?.[field];
+      if (id === undefined) return inherited;
+      if (id === null) return [];
+      const record = records.find((item) => item.id === id);
+      if (!record || record.kind !== kind)
+        throw new Error(`Selected ${kind} replacement is unavailable.`);
+      return [id];
+    };
+    const effectiveCharacterIds = select('characterId', 'character', sourceCharacterIds);
+    const effectiveLocationIds = select('locationId', 'location', sourceLocationIds);
+    const effectiveWardrobeIds = select('wardrobeId', 'wardrobe', sourceWardrobeIds);
+    for (const id of effectiveWardrobeIds) {
+      const wardrobe = records.find((record) => record.id === id);
+      if (wardrobe?.characterId && !effectiveCharacterIds.includes(wardrobe.characterId))
+        throw new Error(
+          `Wardrobe ${wardrobe.name} is bound to another character. Change or clear it for this beat.`,
+        );
+    }
+    const replacementText = (
+      [
+        ['characterId', 'character'],
+        ['locationId', 'location'],
+        ['wardrobeId', 'wardrobe'],
+      ] as const
+    ).flatMap(([field, kind]) => {
+      const id = changes?.[field];
+      if (id === undefined) return [];
+      if (id === null) return [`Remove the previously assigned ${kind} from the new beat.`];
+      const record = records.find((item) => item.id === id)!;
+      return [
+        `Change ${kind} to ${record.name}. ${record.description}${kind === 'character' ? ` Identity: ${record.identityNotes || ''}. Voice: ${record.voice || ''}.` : kind === 'location' ? ` Environment: ${record.environment || ''}. Time: ${record.timeOfDay || ''}. Lighting: ${record.lighting || ''}. Atmosphere: ${record.atmosphere || ''}. Accuracy: ${record.accuracyNotes || ''}.` : ` Colors: ${record.colors || ''}. Materials: ${record.materials || ''}.`}`,
+      ];
+    });
     const context =
-      settings.inheritContext && sourceJob ? String(sourceJob.snapshot.prompt || '') : '';
+      settings.inheritContext && sourceJob && !replacementText.length
+        ? String(snapshot.prompt || '')
+        : '';
     const prompt = [
       context && `Source scene context:\n${context}`,
       `Next action:\n${settings.prompt}`,
+      replacementText.length &&
+        `Changes for this beat (preserve other established details):\n${replacementText.join('\n')}`,
       settings.dialoguePolicy === 'none'
         ? 'Dialogue direction: no spoken dialogue in the new beat.'
         : settings.dialoguePolicy === 'allow'
@@ -109,10 +174,12 @@ export const continueAdapter: GeneratorAdapter = {
         actionPrompt: settings.prompt,
         sourcePrompt: context,
         sourceJobId: sourceJob?.id,
-        sourceCharacterIds:
-          sourceJob?.snapshot.characterIds || sourceJob?.snapshot.sourceCharacterIds || [],
-        sourceLocationIds:
-          sourceJob?.snapshot.locationIds || sourceJob?.snapshot.sourceLocationIds || [],
+        sourceCharacterIds,
+        sourceLocationIds,
+        sourceWardrobeIds,
+        effectiveCharacterIds,
+        effectiveLocationIds,
+        effectiveWardrobeIds,
         sourceDuration: rippleSourceDuration(source),
         sourceFrameTime: range.frameTime,
         retainedSourceFrames: range.retainedSourceFrames,

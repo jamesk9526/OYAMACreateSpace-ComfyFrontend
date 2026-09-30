@@ -14,7 +14,7 @@ export interface ModuleDefinition {
 }
 export type ComfyNode = { class_type: string; inputs: Record<string, unknown> };
 export type ComfyGraph = Record<string, ComfyNode>;
-export type MediaKind = 'image' | 'video' | 'audio';
+export type MediaKind = 'image' | 'video' | 'audio' | 'model';
 export type WorkflowUpload = { id: string; kind: MediaKind; name: string };
 export type WorkflowOutput = {
   filename: string;
@@ -37,6 +37,7 @@ const outputExtensions: Record<MediaKind, RegExp> = {
   image: /\.(png|jpe?g|webp)$/i,
   video: /\.(mp4|webm|mov)$/i,
   audio: /\.(wav|mp3|flac|ogg)$/i,
+  model: /\.glb$/i,
 };
 
 /** Read files only from a module's declared save nodes. Preview and input nodes are ignored. */

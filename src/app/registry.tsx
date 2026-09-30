@@ -20,9 +20,11 @@ import { ProjectsWorkspace } from '../modules/projects';
 import { AssetsWorkspace } from '../modules/assets';
 import { CharactersWorkspace } from '../modules/characters';
 import { LocationsWorkspace } from '../modules/locations';
+import { WardrobeWorkspace } from '../modules/wardrobe';
 import { PreviewPanel } from '../components/PreviewPanel';
 import { LogsWorkspace, LogsInspector } from '../modules/logs';
 import { MovieWorkspace } from '../modules/movie';
+import { ModelingWorkspace } from '../modules/modeling';
 export interface WorkspaceModule {
   definition: ModuleDefinition;
   Workspace: ComponentType;
@@ -37,6 +39,7 @@ const definition = (id: string, title: string): ModuleDefinition => ({
   description: title,
 });
 export const modules: Record<string, WorkspaceModule> = {
+  modeling: { definition: definition('modeling', 'Modeling'), Workspace: ModelingWorkspace },
   logs: {
     definition: definition('logs', 'Application log'),
     Workspace: LogsWorkspace,
@@ -85,6 +88,7 @@ export const modules: Record<string, WorkspaceModule> = {
     Workspace: CharactersWorkspace,
   },
   locations: { definition: definition('locations', 'Locations'), Workspace: LocationsWorkspace },
+  wardrobe: { definition: definition('wardrobe', 'Wardrobe'), Workspace: WardrobeWorkspace },
   movie: {
     definition: definition('movie', 'Movie'),
     Workspace: MovieWorkspace,

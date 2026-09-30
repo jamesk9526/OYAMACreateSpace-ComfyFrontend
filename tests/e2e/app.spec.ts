@@ -24,7 +24,9 @@ test('mock shell, canonical drafts, global records, generation and restart persi
   await page.locator('.navitem').filter({ hasText: 'Characters' }).click();
   await page.getByRole('button', { name: 'New character', exact: true }).click();
   await page.getByLabel('Name', { exact: true }).fill('Mara');
-  await page.getByLabel('Description', { exact: true }).fill('An explorer with red hair.');
+  await page
+    .getByLabel('Appearance and outfit', { exact: true })
+    .fill('An explorer with red hair.');
   await page.getByRole('button', { name: 'Save character' }).click();
   await expect(page.locator('.record-row').filter({ hasText: 'Mara' })).toBeVisible();
   await page.locator('.navitem').filter({ hasText: 'Generate' }).click();

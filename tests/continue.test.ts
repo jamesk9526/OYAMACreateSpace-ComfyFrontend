@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Asset, Job } from '../shared/domain';
+import type { Asset, Job, LibraryRecord } from '../shared/domain';
 import type { ObjectInfo } from '../shared/modules';
 import {
   continueDefaults,
@@ -77,6 +77,84 @@ info.LoraLoaderModelOnly = {
   input: { required: { lora_name: [['minimax_h3_fl2v_turbo_8step_v1.0.safetensors']] } },
 };
 describe('Continue last-frame beat', () => {
+  it('snapshots owned beat changes, suppresses conflicting inherited text, and carries choices forward', () => {
+    const characterId = '44444444-4444-4444-8444-444444444444';
+    const locationId = '55555555-5555-4555-8555-555555555555';
+    const records: LibraryRecord[] = [
+      {
+        id: characterId,
+        kind: 'character',
+        name: 'Mara',
+        description: 'Red hair',
+        identityNotes: 'Freckles',
+        assetIds: [],
+      },
+      {
+        id: locationId,
+        kind: 'location',
+        name: 'Atrium',
+        description: 'Stone arches',
+        lighting: 'Dawn',
+        assetIds: [],
+      },
+    ];
+    const sourceJob = {
+      id: projectId,
+      projectId,
+      status: 'complete',
+      assetIds: [sourceId],
+      snapshot: { prompt: 'Old actor in old room', characterIds: [frameId] },
+    } as unknown as Job;
+    const resolved = continueAdapter.resolve(
+      {
+        projectId,
+        moduleId: 'continue',
+        values: { ...settings, replacements: { characterId, locationId } },
+      },
+      records,
+      (id) => (id === sourceId ? source : frame),
+      [sourceJob],
+    );
+    expect(resolved.values.prompt).toContain('Change character to Mara');
+    expect(resolved.values.prompt).toContain('Change location to Atrium');
+    expect(resolved.values.prompt).not.toContain('Old actor in old room');
+    expect(resolved.values.effectiveCharacterIds).toEqual([characterId]);
+    expect(resolved.values.effectiveLocationIds).toEqual([locationId]);
+    const nextSource = { ...source, id: '66666666-6666-4666-8666-666666666666' };
+    const nextJob = { ...sourceJob, assetIds: [nextSource.id], snapshot: resolved.values } as Job;
+    const next = continueAdapter.resolve(
+      { projectId, moduleId: 'continue', values: { ...settings, sourceVideo: nextSource.id } },
+      records,
+      (id) => (id === nextSource.id ? nextSource : frame),
+      [nextJob],
+    );
+    expect(next.values.sourceCharacterIds).toEqual([characterId]);
+    expect(next.values.sourceLocationIds).toEqual([locationId]);
+    const joined = { ...nextSource, id: '77777777-7777-4777-8777-777777777777' };
+    const joinedNext = continueAdapter.resolve(
+      {
+        projectId,
+        moduleId: 'continue',
+        values: { ...settings, sourceVideo: joined.id, sourceBeatJobId: nextJob.id },
+      },
+      records,
+      (id) => (id === joined.id ? joined : frame),
+      [nextJob],
+    );
+    expect(joinedNext.values.sourceCharacterIds).toEqual([characterId]);
+    expect(() =>
+      continueAdapter.resolve(
+        {
+          projectId,
+          moduleId: 'continue',
+          values: { ...settings, replacements: { characterId: locationId } },
+        },
+        records,
+        (id) => (id === sourceId ? source : frame),
+        [sourceJob],
+      ),
+    ).toThrow('replacement is unavailable');
+  });
   it('keeps script dialogue guidance and audio carry in the resolved job snapshot', () => {
     const sourceJob: Job = {
       id: projectId,

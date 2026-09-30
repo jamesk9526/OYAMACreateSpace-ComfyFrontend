@@ -120,6 +120,7 @@ export async function bootstrap() {
     const ids = [
       ...(Array.isArray(draft.values.characterIds) ? draft.values.characterIds : []),
       ...(Array.isArray(draft.values.locationIds) ? draft.values.locationIds : []),
+      ...(Array.isArray(draft.values.wardrobeIds) ? draft.values.wardrobeIds : []),
     ];
     if (
       !draft.values.modeExplicit &&

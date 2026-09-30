@@ -26,6 +26,22 @@ test('Continue sequence renders selected ancestry, survives restart and reuses c
       const source = state.assets.find((asset) => asset.kind === 'video')!;
       const projectId = state.projects[0].id;
       const beatIds = [crypto.randomUUID(), crypto.randomUUID(), crypto.randomUUID()];
+      const characterId = crypto.randomUUID();
+      const locationId = crypto.randomUUID();
+      await window.oyama.saveRecord({
+        id: characterId,
+        kind: 'character',
+        name: 'Mara',
+        description: 'Copper hair',
+        assetIds: [],
+      });
+      await window.oyama.saveRecord({
+        id: locationId,
+        kind: 'location',
+        name: 'Atrium',
+        description: 'Stone arches',
+        assetIds: [],
+      });
       const script = await window.oyama.saveContinuationScript({
         id: crypto.randomUUID(),
         projectId,
@@ -47,6 +63,7 @@ test('Continue sequence renders selected ancestry, survives restart and reuses c
           duration: 1,
           method: 'last',
           selectedSeconds: 0,
+          ...(index === 0 ? { replacements: { characterId, locationId } } : {}),
           source:
             index === 0
               ? { kind: 'original' }
@@ -55,7 +72,7 @@ test('Continue sequence renders selected ancestry, survives restart and reuses c
                 : { kind: 'beat', beatId: beatIds[0] },
         })),
       });
-      return { scriptId: script.id, projectId, beatIds };
+      return { scriptId: script.id, projectId, beatIds, characterId, locationId };
     });
     const first = await page.evaluate(
       ({ scriptId, beatIds }) => window.oyama.runContinuationScript(scriptId, beatIds[1]),
@@ -78,6 +95,26 @@ test('Continue sequence renders selected ancestry, survives restart and reuses c
     expect(afterFirst[0]?.assetIds.length).toBeGreaterThan(0);
     expect(afterFirst[1]?.assetIds.length).toBeGreaterThan(0);
     expect(afterFirst[2]).toBeUndefined();
+    const firstChildren = (await page.evaluate(() => window.oyama.load())).jobs.filter(
+      (job) => job.snapshot.sequenceParentId === first.id,
+    );
+    const firstBeatJob = firstChildren.find(
+      (job) => job.snapshot.sequenceBeatId === data.beatIds[0],
+    )!;
+    const secondBeatJob = firstChildren.find(
+      (job) => job.snapshot.sequenceBeatId === data.beatIds[1],
+    )!;
+    expect(firstBeatJob.snapshot.effectiveCharacterIds).toEqual([data.characterId]);
+    expect(firstBeatJob.snapshot.effectiveLocationIds).toEqual([data.locationId]);
+    expect(secondBeatJob.snapshot.sourceCharacterIds).toEqual([data.characterId]);
+    await page.locator('.navitem').filter({ hasText: 'Continue / Extend' }).first().click();
+    await page.locator('.composer-tab').filter({ hasText: 'Script' }).click();
+    await expect(page.getByRole('combobox', { name: 'Beat 1 character change' })).toHaveValue(
+      data.characterId,
+    );
+    await expect(page.getByRole('combobox', { name: 'Beat 1 location change' })).toHaveValue(
+      data.locationId,
+    );
     await page.getByRole('button', { name: 'Close window' }).click();
     await app.close();
     app = await electron.launch({ args: ['.'], env });

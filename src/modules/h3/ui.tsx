@@ -17,6 +17,7 @@ import {
 } from '../../stores';
 import { h3Availability, h3Defaults, type H3Settings } from './definition';
 import { effectiveSteps, h3Frames } from './workflow';
+import { activeRecordAssetIds } from '../../../shared/record-media';
 
 export function useH3(): H3Settings {
   const projectId = useShell((s) => s.projectId);
@@ -41,8 +42,8 @@ export function H3Inspector() {
       ? new Set([
           ...s.references,
           ...records
-            .filter((r) => [...s.characterIds, ...s.locationIds].includes(r.id))
-            .flatMap((r) => r.assetIds),
+            .filter((r) => [...s.characterIds, ...s.locationIds, ...s.wardrobeIds].includes(r.id))
+            .flatMap((r) => activeRecordAssetIds(r, assets)),
         ]).size
       : 0;
   return (
@@ -229,8 +230,8 @@ function ReferenceEditor() {
   const available = assets.filter((a) => !a.missing && (!a.projectId || a.projectId === projectId));
   const attachedBy = new Map<string, string[]>();
   for (const record of records) {
-    if (![...s.characterIds, ...s.locationIds].includes(record.id)) continue;
-    for (const id of record.assetIds) {
+    if (![...s.characterIds, ...s.locationIds, ...s.wardrobeIds].includes(record.id)) continue;
+    for (const id of activeRecordAssetIds(record, assets)) {
       attachedBy.set(id, [...(attachedBy.get(id) || []), record.name]);
     }
   }
@@ -299,11 +300,17 @@ function ReferenceEditor() {
 function CharacterEditor() {
   const s = useH3();
   const records = useLibrary((v) => v.records);
+  const assets = useLibrary((v) => v.assets);
   return (
     <div className="reference-editor">
       <div className="reference-list">
         {records.map((record) => {
-          const key = record.kind === 'character' ? 'characterIds' : 'locationIds';
+          const key =
+            record.kind === 'character'
+              ? 'characterIds'
+              : record.kind === 'location'
+                ? 'locationIds'
+                : 'wardrobeIds';
           return (
             <label className="chip" key={record.id}>
               <input
@@ -311,7 +318,12 @@ function CharacterEditor() {
                 checked={s[key].includes(record.id)}
                 onChange={(e) =>
                   patchDraft({
-                    ...(e.target.checked && record.assetIds.length ? { mode: 'reference' } : {}),
+                    ...(e.target.checked && activeRecordAssetIds(record, assets).length
+                      ? { mode: 'reference' }
+                      : {}),
+                    ...(e.target.checked && record.kind === 'wardrobe' && record.characterId
+                      ? { characterIds: [...new Set([...s.characterIds, record.characterId])] }
+                      : {}),
                     [key]: e.target.checked
                       ? [...s[key], record.id]
                       : s[key].filter((id) => id !== record.id),
@@ -324,7 +336,7 @@ function CharacterEditor() {
         })}
         {!records.length && (
           <span className="muted">
-            Create reusable Characters or Locations from the left navigation.
+            Create reusable Characters, Locations or Wardrobe outfits from the left navigation.
           </span>
         )}
       </div>
@@ -352,15 +364,26 @@ export function H3Composer() {
   const projectId = useShell((v) => v.projectId);
   const readiness = useSettings((v) => v.readiness);
   const availability = h3Availability(readiness, s.mode, s.quality);
-  const mediaReady =
-    s.mode === 'text' || (s.mode === 'image' ? Boolean(s.firstFrame) : s.references.length > 0);
   const records = useLibrary((v) => v.records);
+  const assets = useLibrary((v) => v.assets);
+  const mediaReady =
+    s.mode === 'text' ||
+    (s.mode === 'image'
+      ? Boolean(s.firstFrame)
+      : s.references.length > 0 ||
+        records.some(
+          (r) =>
+            [...s.characterIds, ...s.locationIds, ...s.wardrobeIds].includes(r.id) &&
+            activeRecordAssetIds(r, assets).length > 0,
+        ));
   const mediaRequiresReference =
     s.mode !== 'reference' &&
     !s.modeExplicit &&
     (s.references.length > 0 ||
       records.some(
-        (r) => [...s.characterIds, ...s.locationIds].includes(r.id) && r.assetIds.length > 0,
+        (r) =>
+          [...s.characterIds, ...s.locationIds, ...s.wardrobeIds].includes(r.id) &&
+          activeRecordAssetIds(r, assets).length > 0,
       ));
   const [submitting, setSubmitting] = useState(false);
   const generate = async () => {

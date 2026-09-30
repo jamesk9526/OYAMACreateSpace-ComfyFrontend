@@ -5,6 +5,7 @@ import { existsSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import type {
   Asset,
+  AttachRecordImageRequest,
   Bootstrap,
   Draft,
   Job,
@@ -33,6 +34,7 @@ import {
 } from '../../shared/movie-timeline';
 
 const mediaTypes: Record<string, [Asset['kind'], string]> = {
+  '.glb': ['model', 'model/gltf-binary'],
   '.png': ['image', 'image/png'],
   '.jpg': ['image', 'image/jpeg'],
   '.jpeg': ['image', 'image/jpeg'],
@@ -210,6 +212,28 @@ export class Store {
       (source.projectId && source.projectId !== input.projectId)
     )
       throw new Error('Choose a managed video from this project or global library.');
+    for (const beat of input.beats) {
+      for (const [field, kind] of [
+        ['characterId', 'character'],
+        ['locationId', 'location'],
+        ['wardrobeId', 'wardrobe'],
+      ] as const) {
+        const id = beat.replacements?.[field];
+        if (id && this.record(id).kind !== kind)
+          throw new Error(`${beat.name}: replacement ${kind} has the wrong record type.`);
+      }
+      const wardrobeId = beat.replacements?.wardrobeId;
+      if (wardrobeId) {
+        const wardrobe = this.record(wardrobeId);
+        const characterId = beat.replacements?.characterId;
+        if (
+          wardrobe.characterId &&
+          characterId !== undefined &&
+          characterId !== wardrobe.characterId
+        )
+          throw new Error(`${beat.name}: wardrobe is bound to a different character.`);
+      }
+    }
     const settings: Record<string, unknown> = continueSchema.parse({
       ...input.settings,
       prompt: '',
@@ -218,6 +242,7 @@ export class Store {
     });
     delete settings.dialoguePolicy;
     delete settings.audioCarry;
+    delete settings.sourceBeatJobId;
     input.settings = settings;
     return this.db.transaction(() => {
       const row = this.db
@@ -270,12 +295,17 @@ export class Store {
       this.db
         .prepare('INSERT OR REPLACE INTO drafts VALUES(?,?,?)')
         .run(draft.projectId, draft.moduleId, JSON.stringify(draft));
-      for (const key of ['characterIds', 'locationIds']) {
+      for (const [key, kind] of [
+        ['characterIds', 'character'],
+        ['locationIds', 'location'],
+        ['wardrobeIds', 'wardrobe'],
+      ] as const) {
         const ids = draft.values[key];
         if (!Array.isArray(ids)) continue;
         for (const id of ids) {
           if (typeof id !== 'string') throw new Error('Invalid attachment');
-          this.record(id);
+          if (this.record(id).kind !== kind)
+            throw new Error(`Attached ${kind} has the wrong record type.`);
           this.db
             .prepare('INSERT OR IGNORE INTO project_records VALUES(?,?)')
             .run(draft.projectId, id);
@@ -306,6 +336,7 @@ export class Store {
       const asset = this.asset(clip.assetId);
       if (asset.projectId !== timeline.projectId)
         throw new Error('Timeline media must belong to this project.');
+        if (asset.kind === 'model') throw new Error('3D models cannot be placed on the movie timeline.');
       if ((asset.kind === 'audio') !== (clip.track === 'audio'))
         throw new Error('Place audio on Audio 1 and images or video on Video 1.');
       if (
@@ -330,11 +361,64 @@ export class Store {
   }
   saveRecord(value: LibraryRecord) {
     const record = recordSchema.parse(value);
+    const existing = this.db.prepare('SELECT data FROM records WHERE id=?').get(record.id) as
+      JsonRow | undefined;
+    if (existing && (JSON.parse(existing.data) as LibraryRecord).kind !== record.kind)
+      throw new Error('A library record cannot change kind.');
+    if (record.kind === 'wardrobe' && record.characterId) {
+      if (record.characterId === record.id || this.record(record.characterId).kind !== 'character')
+        throw new Error('Wardrobe must be bound to a character.');
+    } else if (record.characterId) throw new Error('Only wardrobes can bind a character.');
+    if (
+      record.kind !== 'character' &&
+      (record.masterAssetId || record.turntableAssetId || record.angleSamples?.length)
+    )
+      throw new Error('Character studio media belongs to character records.');
+    if (record.angleSamples?.length && record.angleSamples.length !== 5)
+      throw new Error('A turntable extraction needs exactly five angle frames.');
+    if (
+      record.angleSamples &&
+      new Set(record.angleSamples.map((sample) => sample.assetId)).size !==
+        record.angleSamples.length
+    )
+      throw new Error('Turntable angle frames must be distinct.');
+    for (const id of [
+      record.masterAssetId,
+      record.turntableAssetId,
+      ...(record.angleSamples || []).map((sample) => sample.assetId),
+    ].filter((id): id is string => Boolean(id)))
+      if (!record.assetIds.includes(id))
+        throw new Error('Character studio media must be in the record reference list.');
+    for (const id of record.approvedAssetIds || [])
+      if (!record.assetIds.includes(id))
+        throw new Error('Approved media must be in the record reference list.');
+    if (record.coverAssetId) {
+      if (!record.assetIds.includes(record.coverAssetId))
+        throw new Error('Cover image must belong to the record.');
+      const cover = this.asset(record.coverAssetId);
+      if (
+        cover.kind !== 'image' ||
+        cover.projectId !== null ||
+        !existsSync(this.assetPath(cover.id))
+      )
+        throw new Error('Cover image must be an available global image.');
+    }
     for (const id of record.assetIds) {
-      if (this.asset(id).projectId !== null)
+      const media = this.asset(id);
+      if (media.projectId !== null)
         throw new Error(
           'Reusable records need global library media. Import from this record editor.',
         );
+      if (record.kind === 'wardrobe' && media.kind !== 'image')
+        throw new Error('Wardrobe references must be images.');
+      if (
+        (id === record.masterAssetId ||
+          record.angleSamples?.some((sample) => sample.assetId === id)) &&
+        media.kind !== 'image'
+      )
+        throw new Error('Character master and angle references must be images.');
+      if (id === record.turntableAssetId && media.kind !== 'video')
+        throw new Error('Character turntable must be a video.');
     }
     this.db.transaction(() => {
       this.db
@@ -347,9 +431,17 @@ export class Store {
     return record;
   }
   removeRecord(id: string) {
+    for (const record of this.rows<LibraryRecord>('records'))
+      if (record.characterId === id)
+        throw new Error('Unbind this character from wardrobes before deleting it.');
+    for (const row of this.db.prepare('SELECT data FROM continuation_scripts').all() as JsonRow[]) {
+      const script = JSON.parse(row.data) as ContinuationScript;
+      if (script.beats.some((beat) => Object.values(beat.replacements || {}).includes(id)))
+        throw new Error('Remove this record from Continue script beats before deleting it.');
+    }
     for (const draft of this.rows<Draft>('drafts')) {
       if (
-        ['characterIds', 'locationIds'].some(
+        ['characterIds', 'locationIds', 'wardrobeIds'].some(
           (key) =>
             Array.isArray(draft.values[key]) && (draft.values[key] as unknown[]).includes(id),
         )
@@ -487,6 +579,30 @@ export class Store {
     const asset = this.asset(id);
     if (asset.projectId === null) return asset;
     return this.importFile(this.assetPath(id), null, asset.name);
+  }
+  async attachRecordImage(request: AttachRecordImageRequest): Promise<LibraryRecord> {
+    const record = this.record(request.recordId);
+    const source = this.asset(request.assetId);
+    this.project(request.projectId);
+    if (source.projectId !== null && source.projectId !== request.projectId)
+      throw new Error('Image belongs to another project.');
+    if (source.kind !== 'image' || !existsSync(this.assetPath(source.id)))
+      throw new Error('Choose an available image.');
+    if (request.purpose === 'master' && record.kind !== 'character')
+      throw new Error('Only characters can have a master image.');
+    if (!record.assetIds.includes(source.id) && record.assetIds.length >= 32)
+      throw new Error('This record has reached its reference limit.');
+    const approved = record.approvedAssetIds ?? record.assetIds;
+    if (request.purpose === 'reference' && !approved.includes(source.id) && approved.length >= 16)
+      throw new Error('This record has reached its approved reference limit.');
+    const asset = await this.promoteAsset(source.id);
+    return this.saveRecord({
+      ...record,
+      assetIds: [...new Set([...record.assetIds, asset.id])],
+      approvedAssetIds:
+        request.purpose === 'master' ? [asset.id] : [...new Set([...approved, asset.id])],
+      ...(request.purpose === 'master' ? { masterAssetId: asset.id, angleSamples: undefined } : {}),
+    });
   }
   async promoteAssetToRecord(
     id: string,

@@ -101,6 +101,20 @@ it('invalidates only camera descendants and treats omitted continuity as its def
   });
   expect(blended.beats.every((beat) => beat.stale)).toBe(true);
 });
+it('invalidates the changed beat and descendants when an owned replacement changes', () => {
+  const previous = reconcileScript(undefined, make());
+  previous.beats.forEach(
+    (beat) =>
+      (beat.result = { jobId: randomUUID(), assetIds: [randomUUID()], deliveredDuration: 1 }),
+  );
+  const edited = reconcileScript(previous, {
+    ...previous,
+    beats: previous.beats.map((beat, index) =>
+      index === 1 ? { ...beat, replacements: { characterId: randomUUID() } } : beat,
+    ),
+  });
+  expect(edited.beats.map((beat) => beat.stale)).toEqual([false, true, true, false]);
+});
 it('reordering previous sources invalidates the changed lineage and deletion leaves explicit references invalid', () => {
   const input = make();
   input.beats[1].source = { kind: 'original' };
